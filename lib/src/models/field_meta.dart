@@ -1,9 +1,37 @@
 import 'package:flutter/widgets.dart';
+import 'dropdown_item.dart';
 import 'dropdown_source.dart';
 
-enum FieldType { text, number, date, dropdown, image, textArea, custom }
+enum FieldType {
+  text,
+  number,
+  date,
+  dropdown,
+  image,
+  textArea,
+  custom,
+
+  /// A horizontal draggable slider. Returns a [double].
+  slider,
+
+  /// A time picker (clock UI). Returns a [TimeOfDay].
+  timePicker,
+
+  /// A number stepper with + / - buttons. Returns an [int].
+  spinner,
+
+  /// A boolean on/off toggle switch. Returns a [bool].
+  toggle,
+
+  /// Pick exactly one option from a list. Returns the selected [id] string.
+  radio,
+
+  /// Select multiple options from a chip list. Returns [List<String>] of ids.
+  chip,
+}
 
 typedef FieldValidator = String? Function(dynamic value);
+
 typedef CustomFieldBuilder = Widget Function(
   BuildContext context,
   dynamic value,
@@ -39,6 +67,23 @@ class FieldMeta {
   final int maxImages;
   final int maxImageSizeBytes;
   final CustomFieldBuilder? builder;
+  final bool obscureText;
+  final int maxLines;
+
+  // ─── Slider ───────────────────────────────────────────────────────────────
+  final double sliderMin;
+  final double sliderMax;
+  final int? sliderDivisions;
+  final String Function(double)? sliderLabelBuilder;
+
+  // ─── Spinner ──────────────────────────────────────────────────────────────
+  final int spinnerMin;
+  final int spinnerMax;
+  final int spinnerStep;
+
+  // ─── Radio / Chip ─────────────────────────────────────────────────────────
+  /// Options for [FieldType.radio] and [FieldType.chip].
+  final List<DropdownItem> options;
 
   const FieldMeta({
     required this.key,
@@ -56,6 +101,16 @@ class FieldMeta {
     this.maxImages = 1,
     this.maxImageSizeBytes = 2 * 1024 * 1024,
     this.builder,
+    this.sliderMin = 0.0,
+    this.sliderMax = 100.0,
+    this.sliderDivisions,
+    this.sliderLabelBuilder,
+    this.spinnerMin = 0,
+    this.spinnerMax = 999,
+    this.spinnerStep = 1,
+    this.options = const [],
+    this.obscureText = false,
+    this.maxLines = 1,
   });
 
   const FieldMeta.custom({
@@ -83,6 +138,8 @@ class FieldMeta {
     String? hint,
     DateTime? firstDate,
     DateTime? lastDate,
+    bool? obscureText,
+    int? maxLines,
   }) {
     return FieldMeta(
       key: key,
@@ -100,6 +157,16 @@ class FieldMeta {
       maxImages: maxImages,
       maxImageSizeBytes: maxImageSizeBytes,
       builder: builder,
+      sliderMin: sliderMin,
+      sliderMax: sliderMax,
+      sliderDivisions: sliderDivisions,
+      sliderLabelBuilder: sliderLabelBuilder,
+      spinnerMin: spinnerMin,
+      spinnerMax: spinnerMax,
+      spinnerStep: spinnerStep,
+      options: options,
+      obscureText: obscureText ?? this.obscureText,
+      maxLines: maxLines ?? this.maxLines,
     );
   }
 }

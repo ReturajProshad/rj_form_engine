@@ -1,8 +1,4 @@
 /// rj_form_engine — A schema-driven form engine for Flutter.
-///
-/// Build any number of forms from a simple [FieldMeta] schema.
-/// Supports text, number, date, cascading dropdowns, image upload,
-/// textarea, and fully custom fields — with zero external dependencies.
 library rj_form_engine;
 
 // Models
@@ -16,6 +12,9 @@ export 'src/state/form_controller.dart';
 
 // Theme
 export 'src/theme/form_theme.dart';
+
+// Validation utilities
+export 'src/validation/validators.dart' hide FieldValidator;
 
 // Widgets
 export 'src/widgets/rj_form.dart';

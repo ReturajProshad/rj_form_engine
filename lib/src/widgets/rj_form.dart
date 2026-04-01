@@ -7,6 +7,7 @@ import 'fields/text_fields.dart';
 import 'fields/date_field.dart';
 import 'fields/dropdown_field.dart';
 import 'fields/image_field.dart';
+import 'fields/extra_fields.dart';
 
 /// The main form widget of [rj_form_engine].
 ///
@@ -300,6 +301,83 @@ class _RjFormState extends State<RjForm> {
             _controller.clearError(field.key);
           },
           error,
+        );
+
+      case FieldType.slider:
+        return RjSliderField(
+          field: field,
+          value: value is double ? value : (value is num ? value.toDouble() : null),
+          errorText: error,
+          theme: widget.theme,
+          onChanged: (v) {
+            _controller.setValue(field.key, v);
+            _controller.clearError(field.key);
+          },
+        );
+
+      case FieldType.timePicker:
+        return RjTimePickerField(
+          field: field,
+          value: value is TimeOfDay ? value : null,
+          errorText: error,
+          theme: widget.theme,
+          onChanged: (v) {
+            _controller.setValue(field.key, v);
+            _controller.clearError(field.key);
+          },
+        );
+
+      case FieldType.spinner:
+        return RjSpinnerField(
+          field: field,
+          value: value is int ? value : (value is num ? value.toInt() : null),
+          errorText: error,
+          theme: widget.theme,
+          onChanged: (v) {
+            _controller.setValue(field.key, v);
+            _controller.clearError(field.key);
+          },
+        );
+
+      case FieldType.toggle:
+        return RjToggleField(
+          field: field,
+          value: value is bool ? value : null,
+          errorText: error,
+          theme: widget.theme,
+          onChanged: (v) {
+            _controller.setValue(field.key, v);
+            _controller.clearError(field.key);
+          },
+        );
+
+      case FieldType.radio:
+        return RjRadioField(
+          field: field,
+          options: field.options,
+          value: value?.toString(),
+          errorText: error,
+          theme: widget.theme,
+          onChanged: (v) {
+            _controller.setValue(field.key, v);
+            _controller.clearError(field.key);
+          },
+        );
+
+      case FieldType.chip:
+        final selected = value is List
+            ? value.whereType<String>().toList()
+            : <String>[];
+        return RjChipField(
+          field: field,
+          options: field.options,
+          value: selected,
+          errorText: error,
+          theme: widget.theme,
+          onChanged: (v) {
+            _controller.setValue(field.key, v);
+            _controller.clearError(field.key);
+          },
         );
     }
   }

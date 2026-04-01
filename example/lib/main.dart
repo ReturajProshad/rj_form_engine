@@ -1,89 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:rj_form_engine/rj_form_engine.dart';
 
-void main() => runApp(const ExampleApp());
+void main() => runApp(const MyApp());
 
-class ExampleApp extends StatelessWidget {
-  const ExampleApp({super.key});
+final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'rj_form_engine Example',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: const ExamplePage(),
-    );
-  }
-}
+// ─── Mock async loaders ───────────────────────────────────────────────────────
 
-// ─── Simulated API calls ─────────────────────────────────────────────────────
-
-Future<List<DropdownItem>> fetchCountries([dynamic _]) async {
+Future<List<DropdownItem>> fetchCountries([_]) async {
   await Future.delayed(const Duration(milliseconds: 500));
   return [
     DropdownItem(id: 'bd', label: 'Bangladesh'),
-    DropdownItem(id: 'in', label: 'India'),
     DropdownItem(id: 'us', label: 'United States'),
+    DropdownItem(id: 'in', label: 'India'),
   ];
 }
 
-Future<List<DropdownItem>> fetchCities([dynamic parentValue]) async {
+Future<List<DropdownItem>> fetchCities([dynamic country]) async {
   await Future.delayed(const Duration(milliseconds: 400));
-  final map = {
+  const map = {
     'bd': [
-      DropdownItem(id: 'dhaka', label: 'Dhaka'),
-      DropdownItem(id: 'ctg', label: 'Chittagong'),
-    ],
-    'in': [
-      DropdownItem(id: 'mum', label: 'Mumbai'),
-      DropdownItem(id: 'del', label: 'Delhi'),
+      {'id': 'dhaka', 'label': 'Dhaka'},
+      {'id': 'ctg', 'label': 'Chattogram'},
     ],
     'us': [
-      DropdownItem(id: 'nyc', label: 'New York'),
-      DropdownItem(id: 'la', label: 'Los Angeles'),
+      {'id': 'ny', 'label': 'New York'},
+      {'id': 'sf', 'label': 'San Francisco'},
+    ],
+    'in': [
+      {'id': 'mum', 'label': 'Mumbai'},
+      {'id': 'del', 'label': 'Delhi'},
     ],
   };
-  return map[parentValue] ?? [];
+  return (map[country] ?? [])
+      .map((e) => DropdownItem(id: e['id']!, label: e['label']!))
+      .toList();
 }
 
-// ─── Field Definitions ───────────────────────────────────────────────────────
+// ─── Field definitions ────────────────────────────────────────────────────────
 
 final _fields = [
+  // ── Basic text ──
   FieldMeta(
     key: 'full_name',
     label: 'Full Name',
     type: FieldType.text,
     required: true,
-    hint: 'Enter your full name',
     validators: [
-      (v) => (v is String && v.trim().length < 3) ? 'Name too short' : null,
+      RjValidators.minLength(3),
+      RjValidators.lettersOnly(),
     ],
   ),
+
+  // ── Email with built-in validator ──
+  FieldMeta(
+    key: 'email',
+    label: 'Email Address',
+    type: FieldType.text,
+    required: true,
+    validators: [RjValidators.email()],
+  ),
+
+  // ── Phone with BD validator ──
+  FieldMeta(
+    key: 'phone',
+    label: 'Mobile Number',
+    type: FieldType.text,
+    hint: '01XXXXXXXXX',
+    validators: [RjValidators.bdPhone()],
+  ),
+
+  // ── Number with range ──
   FieldMeta(
     key: 'age',
     label: 'Age',
     type: FieldType.number,
     required: true,
-    validators: [
-      (v) => (v is num && v < 0) ? 'Age cannot be negative' : null,
-    ],
+    validators: [RjValidators.between(1, 120)],
   ),
+
+  // ── Date ──
   FieldMeta(
     key: 'dob',
     label: 'Date of Birth',
     type: FieldType.date,
-    lastDate: DateTime.now(),
+    required: true,
     firstDate: DateTime(1900),
+    lastDate: DateTime.now(),
+    validators: [RjValidators.pastDate()],
   ),
+
+  // ── Time picker ──
   FieldMeta(
-    key: 'bio',
-    label: 'Bio',
-    type: FieldType.textArea,
-    hint: 'Write something about yourself...',
+    key: 'preferred_time',
+    label: 'Preferred Contact Time',
+    type: FieldType.timePicker,
   ),
+
+  // ── Dropdown cascade ──
   FieldMeta(
     key: 'country',
     label: 'Country',
@@ -95,48 +109,142 @@ final _fields = [
     key: 'city',
     label: 'City',
     type: FieldType.dropdown,
-    required: true,
     dependsOn: 'country',
+    dependency: FieldDependency(
+      dependsOn: 'country',
+      condition: (v) => v != null,
+    ),
     dropdownSource: DropdownSource.async(fetchCities),
-    dependency: FieldDependency(dependsOn: 'country'),
   ),
+
+  // ── Static dropdown ──
   FieldMeta(
     key: 'status',
-    label: 'Status',
+    label: 'Account Status',
     type: FieldType.dropdown,
     dropdownSource: DropdownSource.static([
       DropdownItem(id: 'active', label: 'Active'),
       DropdownItem(id: 'inactive', label: 'Inactive'),
+      DropdownItem(id: 'pending', label: 'Pending Review'),
     ]),
   ),
+
+  // ── Radio ──
   FieldMeta(
-    key: 'avatar',
+    key: 'gender',
+    label: 'Gender',
+    type: FieldType.radio,
+    required: true,
+    options: [
+      DropdownItem(id: 'male', label: 'Male'),
+      DropdownItem(id: 'female', label: 'Female'),
+      DropdownItem(id: 'other', label: 'Other / Prefer not to say'),
+    ],
+  ),
+
+  // ── Chip (multi-select) ──
+  FieldMeta(
+    key: 'interests',
+    label: 'Interests',
+    type: FieldType.chip,
+    required: true,
+    validators: [RjValidators.minSelect(1, message: 'Pick at least one interest')],
+    options: [
+      DropdownItem(id: 'tech', label: 'Technology'),
+      DropdownItem(id: 'agri', label: 'Agriculture'),
+      DropdownItem(id: 'finance', label: 'Finance'),
+      DropdownItem(id: 'health', label: 'Healthcare'),
+      DropdownItem(id: 'edu', label: 'Education'),
+      DropdownItem(id: 'erp', label: 'ERP Systems'),
+    ],
+  ),
+
+  // ── Slider ──
+  FieldMeta(
+    key: 'experience_years',
+    label: 'Years of Experience',
+    type: FieldType.slider,
+    sliderMin: 0,
+    sliderMax: 30,
+    sliderDivisions: 30,
+    sliderLabelBuilder: (v) => '${v.toInt()} yrs',
+  ),
+
+  // ── Spinner ──
+  FieldMeta(
+    key: 'team_size',
+    label: 'Team Size',
+    type: FieldType.spinner,
+    spinnerMin: 1,
+    spinnerMax: 500,
+    spinnerStep: 5,
+    validators: [RjValidators.min(1)],
+  ),
+
+  // ── Toggle ──
+  FieldMeta(
+    key: 'notifications',
+    label: 'Enable Notifications',
+    type: FieldType.toggle,
+    hint: 'Receive alerts for important updates',
+  ),
+
+  // ── Textarea ──
+  FieldMeta(
+    key: 'bio',
+    label: 'Short Bio',
+    type: FieldType.textArea,
+    hint: 'Tell us about yourself...',
+    validators: [RjValidators.maxLength(300)],
+  ),
+
+  // ── Image upload ──
+  FieldMeta(
+    key: 'profile_image',
     label: 'Profile Photo',
     type: FieldType.image,
     maxImages: 2,
   ),
-  // Custom field example
+
+  // ── Custom field — star rating ──
   FieldMeta.custom(
-    key: 'agree',
-    label: 'Terms',
+    key: 'rating',
+    label: 'Satisfaction Rating',
     required: true,
     validators: [
-      (v) => (v != true) ? 'You must agree to the terms' : null,
+      (v) => (v == null || v == 0) ? 'Please give a rating' : null,
     ],
     builder: (context, value, onChanged, errorText) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CheckboxListTile(
-            value: value == true,
-            onChanged: (v) => onChanged(v),
-            title: const Text('I agree to the Terms & Conditions'),
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
+          const Text(
+            'Satisfaction Rating *',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF374151),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: List.generate(5, (i) {
+              final selected = (value as int? ?? 0) > i;
+              return IconButton(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                constraints: const BoxConstraints(),
+                icon: Icon(
+                  selected ? Icons.star_rounded : Icons.star_outline_rounded,
+                  color: Colors.amber,
+                  size: 36,
+                ),
+                onPressed: () => onChanged(i + 1),
+              );
+            }),
           ),
           if (errorText != null)
             Padding(
-              padding: const EdgeInsets.only(left: 16),
+              padding: const EdgeInsets.only(top: 4, left: 4),
               child: Text(
                 errorText,
                 style: const TextStyle(color: Colors.red, fontSize: 12),
@@ -146,20 +254,56 @@ final _fields = [
       );
     },
   ),
+
+  // ── Conditional field — shown only when country == 'bd' ──
+  FieldMeta(
+    key: 'nid',
+    label: 'National ID (NID)',
+    type: FieldType.text,
+    hint: '10 or 17 digit NID number',
+    dependency: FieldDependency(
+      dependsOn: 'country',
+      condition: (v) => v == 'bd',
+    ),
+    validators: [
+      RjValidators.pattern(
+        RegExp(r'^\d{10}$|^\d{17}$'),
+        message: 'NID must be 10 or 17 digits',
+      ),
+    ],
+  ),
 ];
 
-// ─── Example Page ────────────────────────────────────────────────────────────
+// ─── App ─────────────────────────────────────────────────────────────────────
 
-class ExamplePage extends StatefulWidget {
-  const ExamplePage({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
-  State<ExamplePage> createState() => _ExamplePageState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'rj_form_engine showcase',
+      debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: messengerKey,
+      theme: ThemeData(
+        colorSchemeSeed: Colors.blue,
+        useMaterial3: true,
+      ),
+      home: const ShowcasePage(),
+    );
+  }
 }
 
-class _ExamplePageState extends State<ExamplePage> {
+class ShowcasePage extends StatefulWidget {
+  const ShowcasePage({super.key});
+
+  @override
+  State<ShowcasePage> createState() => _ShowcasePageState();
+}
+
+class _ShowcasePageState extends State<ShowcasePage> {
   final _controller = FormController();
-  FormResult? _lastResult;
+  Map<String, dynamic>? _submitted;
 
   @override
   void dispose() {
@@ -171,54 +315,98 @@ class _ExamplePageState extends State<ExamplePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('rj_form_engine example'),
+        title: const Text('rj_form_engine'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Reset form',
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              _controller.clear();
+              setState(() => _submitted = null);
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             RjForm(
               fields: _fields,
               controller: _controller,
+              submitLabel: 'Save Profile',
               theme: const RjFormTheme(
                 primaryColor: Color(0xFF2563EB),
                 fieldSpacing: 20,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
               ),
-              submitLabel: 'Save Profile',
               onSubmit: (result) async {
-                // Simulate network call
-                await Future.delayed(const Duration(seconds: 1));
-                setState(() => _lastResult = result);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Form submitted successfully!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                await Future.delayed(const Duration(milliseconds: 800));
+                setState(() => _submitted = result.values);
+                messengerKey.currentState?.showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ Form submitted successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               },
             ),
 
             // Show submitted values
-            if (_lastResult != null) ...[
-              const Divider(height: 40),
+            if (_submitted != null) ...[
+              const Divider(height: 48),
               const Text(
-                'Submitted Values:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                'Submitted Values',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              ..._lastResult!.values.entries.map(
+              const SizedBox(height: 12),
+              ..._submitted!.entries.map(
                 (e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('${e.key}: ${e.value}'),
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 140,
+                        child: Text(
+                          e.key,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${e.value}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ],
         ),
+      ),
+
+      // External submit via FAB
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.send),
+        label: const Text('Submit via FAB'),
+        onPressed: () {
+          if (_controller.validate(_fields)) {
+            final result = _controller.toResult();
+            setState(() => _submitted = result.values);
+            messengerKey.currentState?.showSnackBar(
+              SnackBar(content: Text('FAB submitted: ${result.values.length} fields')),
+            );
+          }
+        },
       ),
     );
   }
