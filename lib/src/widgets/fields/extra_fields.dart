@@ -19,8 +19,7 @@ Widget _fieldLabel(String label, bool required, RjFormTheme theme) {
                 color: Color(0xFF374151),
               ),
         ),
-        if (required)
-          Text(' *', style: TextStyle(color: theme.errorColor)),
+        if (required) Text(' *', style: TextStyle(color: theme.errorColor)),
       ],
     ),
   );
@@ -32,8 +31,8 @@ Widget _errorText(String? error, RjFormTheme theme) {
     padding: const EdgeInsets.only(top: 6, left: 4),
     child: Text(
       error,
-      style: theme.errorStyle ??
-          TextStyle(color: theme.errorColor, fontSize: 12),
+      style:
+          theme.errorStyle ?? TextStyle(color: theme.errorColor, fontSize: 12),
     ),
   );
 }
@@ -86,10 +85,12 @@ class RjSliderField extends StatelessWidget {
                 children: [
                   Text(
                     field.sliderMin.toStringAsFixed(0),
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    style:
+                        const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: theme.primaryColor,
                       borderRadius: BorderRadius.circular(20),
@@ -105,7 +106,8 @@ class RjSliderField extends StatelessWidget {
                   ),
                   Text(
                     field.sliderMax.toStringAsFixed(0),
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    style:
+                        const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
                   ),
                 ],
               ),
@@ -154,10 +156,30 @@ class RjTimePickerField extends StatelessWidget {
 
   String _format(TimeOfDay? t) {
     if (t == null) return '';
+    final format = field.timeFormat;
+    if (format != null) {
+      return _applyTimeFormat(t, format);
+    }
     final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
     final m = t.minute.toString().padLeft(2, '0');
     final period = t.period == DayPeriod.am ? 'AM' : 'PM';
     return '$h:$m $period';
+  }
+
+  String _applyTimeFormat(TimeOfDay t, String format) {
+    final hour24 = t.hour;
+    final hour12 = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final minute = t.minute.toString().padLeft(2, '0');
+    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
+
+    return format
+        .replaceAll('HH', hour24.toString().padLeft(2, '0'))
+        .replaceAll('H', hour24.toString())
+        .replaceAll('hh', hour12.toString().padLeft(2, '0'))
+        .replaceAll('h', hour12.toString())
+        .replaceAll('mm', minute)
+        .replaceAll('a', period)
+        .replaceAll('A', period);
   }
 
   Future<void> _pick(BuildContext context) async {
@@ -310,9 +332,8 @@ class _SpinnerButton extends StatelessWidget {
         width: 52,
         height: 52,
         decoration: BoxDecoration(
-          color: enabled
-              ? primaryColor.withOpacity(0.08)
-              : Colors.grey.shade100,
+          color:
+              enabled ? primaryColor.withOpacity(0.08) : Colors.grey.shade100,
           borderRadius: borderRadius,
         ),
         child: Icon(
@@ -452,15 +473,14 @@ class RjRadioField extends StatelessWidget {
                   option.label,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
-                    color: selected
-                        ? theme.primaryColor
-                        : const Color(0xFF374151),
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                    color:
+                        selected ? theme.primaryColor : const Color(0xFF374151),
                   ),
                 ),
                 subtitle: option.sublabel != null
-                    ? Text(option.sublabel!, style: const TextStyle(fontSize: 12))
+                    ? Text(option.sublabel!,
+                        style: const TextStyle(fontSize: 12))
                     : null,
                 activeColor: theme.primaryColor,
                 dense: true,
@@ -524,8 +544,7 @@ class RjChipField extends StatelessWidget {
                   option.label,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                     color: selected ? Colors.white : const Color(0xFF374151),
                   ),
                 ),
@@ -543,12 +562,10 @@ class RjChipField extends StatelessWidget {
                 checkmarkColor: Colors.white,
                 backgroundColor: theme.fieldFillColor,
                 side: BorderSide(
-                  color:
-                      selected ? theme.primaryColor : theme.borderColor,
+                  color: selected ? theme.primaryColor : theme.borderColor,
                 ),
                 showCheckmark: true,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               );
             }).toList(),
           ),

@@ -3,6 +3,45 @@ import 'package:flutter/services.dart';
 import '../../models/field_meta.dart';
 import '../../theme/form_theme.dart';
 
+class _NumberInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    if (text.isEmpty) return newValue;
+
+    final minusCount = text
+        .splitMapJoin(
+          RegExp(r'-'),
+          onMatch: (_) => '-',
+          onNonMatch: (_) => '',
+        )
+        .length;
+
+    if (minusCount > 1) return oldValue;
+    if (minusCount == 1 && !text.startsWith('-')) return oldValue;
+
+    final dotCount = text
+        .splitMapJoin(
+          RegExp(r'\.'),
+          onMatch: (_) => '.',
+          onNonMatch: (_) => '',
+        )
+        .length;
+
+    if (dotCount > 1) return oldValue;
+
+    if (text == '-' || text == '-.' || text == '.') return newValue;
+
+    final number = num.tryParse(text);
+    if (number == null) return oldValue;
+
+    return newValue;
+  }
+}
+
 class RjTextField extends StatefulWidget {
   final FieldMeta field;
   final dynamic value;
@@ -58,7 +97,6 @@ class _RjTextFieldState extends State<RjTextField> {
   @override
   void didUpdateWidget(RjTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Sync external value changes without disturbing cursor
     if (_ownsController) {
       final newText = widget.value?.toString() ?? '';
       if (_controller.text != newText) {
@@ -76,23 +114,34 @@ class _RjTextFieldState extends State<RjTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      obscureText: widget.field.obscureText,
-      controller: _controller,
-      focusNode: _focusNode,
-      readOnly: widget.readOnly,
-      onTap: widget.onTap,
-      maxLines: widget.field.type == FieldType.textArea ? widget.field.maxLines : 1,
-      style: widget.theme.inputStyle ?? const TextStyle(fontSize: 14, color: Color(0xFF111827)),
-      keyboardType: widget.field.type == FieldType.textArea ? TextInputType.multiline : TextInputType.text,
-      decoration: widget.theme.inputDecoration(
-        label: widget.field.label,
-        hint: widget.field.hint,
-        errorText: widget.errorText,
-        isFocused: _isFocused,
-        suffixIcon: widget.readOnly ? const Icon(Icons.lock_outline, size: 16, color: Color(0xFF9CA3AF)) : null,
+    return Semantics(
+      label: widget.field.label,
+      hint: widget.field.hint,
+      child: TextFormField(
+        obscureText: widget.field.obscureText,
+        controller: _controller,
+        focusNode: _focusNode,
+        readOnly: widget.readOnly,
+        onTap: widget.onTap,
+        maxLines:
+            widget.field.type == FieldType.textArea ? widget.field.maxLines : 1,
+        style: widget.theme.inputStyle ??
+            const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+        keyboardType: widget.field.type == FieldType.textArea
+            ? TextInputType.multiline
+            : TextInputType.text,
+        decoration: widget.theme.inputDecoration(
+          label: widget.field.label,
+          hint: widget.field.hint,
+          errorText: widget.errorText,
+          isFocused: _isFocused,
+          suffixIcon: widget.readOnly
+              ? const Icon(Icons.lock_outline,
+                  size: 16, color: Color(0xFF9CA3AF))
+              : null,
+        ),
+        onChanged: widget.onChanged,
       ),
-      onChanged: widget.onChanged,
     );
   }
 }
@@ -152,21 +201,26 @@ class _RjNumberFieldState extends State<RjNumberField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: _controller,
-      focusNode: _focusNode,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^-?[\d]*\.?[\d]*')),
-      ],
-      style: widget.theme.inputStyle ?? const TextStyle(fontSize: 14, color: Color(0xFF111827)),
-      decoration: widget.theme.inputDecoration(
-        label: widget.field.label,
-        hint: widget.field.hint,
-        errorText: widget.errorText,
-        isFocused: _isFocused,
+    return Semantics(
+      label: widget.field.label,
+      hint: widget.field.hint,
+      child: TextFormField(
+        controller: _controller,
+        focusNode: _focusNode,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          _NumberInputFormatter(),
+        ],
+        style: widget.theme.inputStyle ??
+            const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+        decoration: widget.theme.inputDecoration(
+          label: widget.field.label,
+          hint: widget.field.hint,
+          errorText: widget.errorText,
+          isFocused: _isFocused,
+        ),
+        onChanged: (v) => widget.onChanged(num.tryParse(v)),
       ),
-      onChanged: (v) => widget.onChanged(num.tryParse(v)),
     );
   }
 }

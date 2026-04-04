@@ -69,6 +69,8 @@ class FieldMeta {
   final CustomFieldBuilder? builder;
   final bool obscureText;
   final int maxLines;
+  final String? dateFormat;
+  final String? timeFormat;
 
   // ─── Slider ───────────────────────────────────────────────────────────────
   final double sliderMin;
@@ -111,6 +113,8 @@ class FieldMeta {
     this.options = const [],
     this.obscureText = false,
     this.maxLines = 1,
+    this.dateFormat,
+    this.timeFormat,
   });
 
   const FieldMeta.custom({
@@ -167,6 +171,8 @@ class FieldMeta {
       options: options,
       obscureText: obscureText ?? this.obscureText,
       maxLines: maxLines ?? this.maxLines,
+      dateFormat: dateFormat ?? this.dateFormat,
+      timeFormat: timeFormat ?? this.timeFormat,
     );
   }
 }

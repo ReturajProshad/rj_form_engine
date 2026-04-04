@@ -2,7 +2,7 @@
 
 **A schema-driven form engine for Flutter.**
 
-Build 100 forms from pure configuration. Zero external dependencies. Any state management.
+Build complex forms from pure configuration. One external dependency (`image_picker`). Any state management.
 
 [![pub.dev](https://img.shields.io/pub/v/rj_form_engine.svg)](https://pub.dev/packages/rj_form_engine)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -39,18 +39,23 @@ RjForm(
 
 ## Features
 
-- **6 field types** — text, number, date, dropdown, image upload, textarea
+- **13 field types** — text, number, date, dropdown, image upload, textarea, slider, time picker, spinner, toggle, radio, chip multi-select, custom
 - **Custom fields** — inject any widget via `FieldMeta.custom`
 - **Cascading dropdowns** — parent/child dependency with auto-reload and auto-clear
 - **Async dropdown loading** — load items from APIs, databases, or caches
 - **Static dropdowns** — pass a fixed list when no async call is needed
-- **Built-in validation** — required check + custom validator functions per field
+- **Built-in validation** — 20+ validators (email, phone, URL, password rules, date ranges, etc.)
 - **Conditional visibility** — show/hide fields based on other field values
 - **View / edit modes** — render read-only with a single flag
 - **Pre-fill values** — for edit or clone mode
 - **External controller** — read form state from outside the widget
+- **`onChanged` callback** — react to individual field changes in real time
+- **Error summary** — display all validation errors at the top of the form
+- **Keyboard dismissal** — tap outside fields to dismiss the keyboard
+- **Accessibility** — `Semantics` labels on all field widgets
+- **Custom date/time formats** — use `dateFormat` and `timeFormat` on `FieldMeta`
 - **Themeable** — one `RjFormTheme` controls all field styles
-- **Zero dependencies** — only `flutter` SDK + `image_picker`
+- **Minimal dependencies** — only `flutter` SDK + `image_picker`
 
 ---
 
@@ -80,7 +85,7 @@ RjForm(
       type: FieldType.text,
       required: true,
       validators: [
-        (v) => (v is String && !v.contains('@')) ? 'Invalid email' : null,
+        RjValidators.email(),
       ],
     ),
     FieldMeta(
@@ -102,15 +107,21 @@ RjForm(
 
 ## Field Types
 
-| Type | Description |
-|------|-------------|
-| `FieldType.text` | Single-line text input |
-| `FieldType.number` | Numeric input (int or decimal) |
-| `FieldType.date` | Date picker (returns `DateTime`) |
-| `FieldType.dropdown` | Static or async dropdown |
-| `FieldType.textArea` | Multi-line text input |
-| `FieldType.image` | Image picker (returns `List<String>` paths) |
-| `FieldType.custom` | Your own widget via a builder function |
+| Type | Description | Returns |
+|------|-------------|---------|
+| `FieldType.text` | Single-line text input | `String` |
+| `FieldType.number` | Numeric input (int or decimal) | `num?` |
+| `FieldType.date` | Date picker | `DateTime` |
+| `FieldType.dropdown` | Static or async dropdown | `String?` (item id) |
+| `FieldType.textArea` | Multi-line text input | `String` |
+| `FieldType.image` | Image picker (gallery) | `List<String>` (file paths) |
+| `FieldType.custom` | Your own widget via a builder function | Any |
+| `FieldType.slider` | Horizontal slider with min/max | `double` |
+| `FieldType.timePicker` | Time picker (clock UI) | `TimeOfDay` |
+| `FieldType.spinner` | Number stepper with + / - buttons | `int` |
+| `FieldType.toggle` | Boolean on/off switch | `bool` |
+| `FieldType.radio` | Single-select radio list | `String` (option id) |
+| `FieldType.chip` | Multi-select chip list | `List<String>` (option ids) |
 
 ---
 
@@ -265,6 +276,64 @@ FieldMeta(
 
 ---
 
+## Real-time Change Tracking
+
+React to field changes as the user types — useful for auto-save, analytics, or enabling/disabling buttons:
+
+```dart
+RjForm(
+  fields: fields,
+  onSubmit: (_) async {},
+  onChanged: (key, value) {
+    print('$key changed to: $value');
+    // e.g., auto-save, enable submit button, etc.
+  },
+)
+```
+
+---
+
+## Error Summary
+
+Display all validation errors at the top of the form for better UX on long forms:
+
+```dart
+RjForm(
+  fields: fields,
+  onSubmit: (_) async {},
+  showErrorsSummary: true,
+)
+```
+
+---
+
+## Custom Date/Time Formats
+
+Control how dates and times are displayed:
+
+```dart
+// Date field with custom format
+FieldMeta(
+  key: 'dob',
+  label: 'Date of Birth',
+  type: FieldType.date,
+  dateFormat: 'dd/MM/yyyy',  // or 'MM-dd-yyyy', 'yyyy.MM.dd', etc.
+),
+
+// Time field with 24-hour format
+FieldMeta(
+  key: 'meeting_time',
+  label: 'Meeting Time',
+  type: FieldType.timePicker,
+  timeFormat: 'HH:mm',  // or 'h:mm a', 'HH:mm:ss', etc.
+),
+```
+
+Supported date tokens: `yyyy`, `yy`, `MM`, `M`, `dd`, `d`
+Supported time tokens: `HH`, `H`, `hh`, `h`, `mm`, `a`/`A`
+
+---
+
 ## API Reference
 
 ### `FieldMeta`
@@ -285,6 +354,8 @@ FieldMeta(
 | `viewOnly` | `bool` | Read-only rendering |
 | `hint` | `String?` | Placeholder text |
 | `builder` | `CustomFieldBuilder?` | Custom widget builder |
+| `dateFormat` | `String?` | Custom date format string |
+| `timeFormat` | `String?` | Custom time format string |
 
 ### `DropdownSource`
 
@@ -305,6 +376,37 @@ DropdownSource.async(Future<List<DropdownItem>> Function([dynamic parentValue]) 
 | `values` | Current form values map |
 | `errors` | Current error map |
 | `isDirty` | True if form has values |
+
+### `RjValidators`
+
+| Validator | Description |
+|-----------|-------------|
+| `email()` | Validates email format |
+| `url()` | Validates URL format |
+| `phone()` | Validates international phone |
+| `bdPhone()` | Validates Bangladeshi mobile number |
+| `minLength(n)` | Minimum string length |
+| `maxLength(n)` | Maximum string length |
+| `lengthBetween(min, max)` | String length range |
+| `min(n)` | Minimum numeric value |
+| `max(n)` | Maximum numeric value |
+| `between(min, max)` | Numeric range |
+| `positive()` | Positive number (> 0) |
+| `nonNegative()` | Non-negative number (≥ 0) |
+| `hasUppercase()` | At least one uppercase letter |
+| `hasLowercase()` | At least one lowercase letter |
+| `hasDigit()` | At least one digit |
+| `hasSpecialChar()` | At least one special character |
+| `pattern(regex)` | Custom regex pattern |
+| `lettersOnly()` | Letters only |
+| `digitsOnly()` | Digits only |
+| `alphanumeric()` | Letters and digits only |
+| `pastDate()` | Date must be in the past |
+| `futureDate()` | Date must be in the future |
+| `minSelect(n)` | Minimum selections (multi-select) |
+| `maxSelect(n)` | Maximum selections (multi-select) |
+| `matches(other)` | Values must match (e.g., confirm password) |
+| `custom(fn)` | Wrap custom logic |
 
 ---
 

@@ -9,81 +9,19 @@ import 'fields/dropdown_field.dart';
 import 'fields/image_field.dart';
 import 'fields/extra_fields.dart';
 
-/// The main form widget of [rj_form_engine].
-///
-/// Renders a list of [FieldMeta] definitions as a fully functional,
-/// validated form. Zero external dependencies — works with any state
-/// management or plain StatefulWidget.
-///
-/// **Basic usage:**
-/// ```dart
-/// RjForm(
-///   fields: [
-///     FieldMeta(key: 'name', label: 'Full Name', type: FieldType.text, required: true),
-///     FieldMeta(key: 'dob',  label: 'Date of Birth', type: FieldType.date),
-///   ],
-///   onSubmit: (result) async {
-///     print(result.values); // {'name': 'John', 'dob': DateTime(...)}
-///   },
-/// )
-/// ```
-///
-/// **Pre-filling values (edit mode):**
-/// ```dart
-/// RjForm(
-///   fields: fields,
-///   initialValues: {'name': 'John Doe', 'dob': DateTime(1990, 1, 1)},
-///   onSubmit: (_) async {},
-/// )
-/// ```
-///
-/// **External controller (read values outside the form):**
-/// ```dart
-/// final _ctrl = FormController();
-///
-/// RjForm(
-///   fields: fields,
-///   controller: _ctrl,
-///   onSubmit: (_) async {},
-/// )
-/// ```
-///
-/// **Custom styling:**
-/// ```dart
-/// RjForm(
-///   fields: fields,
-///   theme: RjFormTheme(primaryColor: Colors.teal),
-///   onSubmit: (_) async {},
-/// )
-/// ```
 class RjForm extends StatefulWidget {
-  /// The list of field definitions to render.
   final List<FieldMeta> fields;
-
-  /// Called with a [FormResult] when validation passes and the user submits.
-  /// Make this async to show a loading state on the submit button.
   final Future<void> Function(FormResult result) onSubmit;
-
-  /// Optional pre-filled values. Useful for edit/clone mode.
   final Map<String, dynamic>? initialValues;
-
-  /// Optional external controller. If provided, the form will use this
-  /// controller instead of creating its own. You are responsible for
-  /// calling [FormController.dispose].
   final FormController? controller;
-
-  /// Visual theme for all fields. Defaults to [RjFormTheme] with sensible values.
   final RjFormTheme theme;
-
-  /// Label for the submit button. Defaults to 'Submit'.
   final String submitLabel;
-
-  /// When true, the submit button is hidden. Useful when you want to
-  /// trigger submission externally via [FormController.validate].
   final bool hideSubmitButton;
-
-  /// When true, all fields are rendered as read-only (view mode).
   final bool viewOnly;
+  final void Function(String key, dynamic value)? onChanged;
+  final bool showErrorsSummary;
+  final bool autoDismissKeyboard;
+  final String? Function(Map<String, String> errors)? errorsSummaryBuilder;
 
   const RjForm({
     super.key,
@@ -95,6 +33,10 @@ class RjForm extends StatefulWidget {
     this.submitLabel = 'Submit',
     this.hideSubmitButton = false,
     this.viewOnly = false,
+    this.onChanged,
+    this.showErrorsSummary = false,
+    this.autoDismissKeyboard = true,
+    this.errorsSummaryBuilder,
   });
 
   @override
@@ -114,7 +56,6 @@ class _RjFormState extends State<RjForm> {
     _controller = widget.controller ?? FormController();
 
     if (widget.initialValues != null) {
-      // Use microtask to avoid calling notifyListeners during build
       Future.microtask(() {
         if (mounted) _controller.setAll(widget.initialValues!);
       });
@@ -129,7 +70,12 @@ class _RjFormState extends State<RjForm> {
 
   Future<void> _submit() async {
     final isValid = _controller.validate(widget.fields);
-    if (!isValid) return;
+    if (!isValid) {
+      if (widget.autoDismissKeyboard) {
+        FocusScope.of(context).unfocus();
+      }
+      return;
+    }
 
     setState(() => _isSubmitting = true);
     try {
@@ -139,18 +85,23 @@ class _RjFormState extends State<RjForm> {
     }
   }
 
+  void _setValue(String key, dynamic value) {
+    _controller.setValue(key, value);
+    _controller.clearError(key);
+    widget.onChanged?.call(key, value);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
+    Widget content = ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Fields
+            if (widget.showErrorsSummary && _controller.errors.isNotEmpty)
+              _buildErrorsSummary(),
             ..._buildFields(),
-
-            // Submit button
             if (!widget.hideSubmitButton && !widget.viewOnly) ...[
               SizedBox(height: widget.theme.fieldSpacing),
               _SubmitButton(
@@ -164,13 +115,73 @@ class _RjFormState extends State<RjForm> {
         );
       },
     );
+
+    if (widget.autoDismissKeyboard) {
+      content = GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: content,
+      );
+    }
+
+    return content;
+  }
+
+  Widget _buildErrorsSummary() {
+    return Container(
+      margin: EdgeInsets.only(bottom: widget.theme.fieldSpacing),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: widget.theme.errorColor.withOpacity(0.08),
+        borderRadius: widget.theme.borderRadius,
+        border: Border.all(
+          color: widget.theme.errorColor.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: widget.theme.errorColor,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Please fix the following errors:',
+                style: TextStyle(
+                  color: widget.theme.errorColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ..._controller.errors.entries.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                widget.errorsSummaryBuilder?.call(_controller.errors) ??
+                    '• ${e.key}: ${e.value}',
+                style: TextStyle(
+                  color: widget.theme.errorColor,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   List<Widget> _buildFields() {
     final widgets = <Widget>[];
 
     for (final field in widget.fields) {
-      // Visibility check
       if (field.dependency != null &&
           !field.dependency!.isVisible(_controller.values)) {
         continue;
@@ -209,10 +220,7 @@ class _RjFormState extends State<RjForm> {
           value: value,
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.textArea:
@@ -222,10 +230,7 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           maxLines: 4,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.number:
@@ -234,10 +239,7 @@ class _RjFormState extends State<RjForm> {
           value: value,
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.date:
@@ -246,10 +248,7 @@ class _RjFormState extends State<RjForm> {
           value: value is DateTime ? value : null,
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.dropdown:
@@ -264,26 +263,23 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) {
-            _controller.setValueAndClearDependents(
-                field.key, v, widget.fields);
+            _controller.setValueAndClearDependents(field.key, v, widget.fields);
             _controller.clearError(field.key);
+            widget.onChanged?.call(field.key, v);
           },
         );
 
       case FieldType.image:
-        final paths = value is List
-            ? value.whereType<String>().toList()
-            : <String>[];
+        final paths =
+            value is List ? value.whereType<String>().toList() : <String>[];
 
         return RjImageField(
           field: field,
           value: paths,
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
+          onValidationError: (msg) => _controller.setError(field.key, msg),
         );
 
       case FieldType.custom:
@@ -296,23 +292,19 @@ class _RjFormState extends State<RjForm> {
         return field.builder!(
           context,
           value,
-          (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          (v) => _setValue(field.key, v),
           error,
         );
 
       case FieldType.slider:
         return RjSliderField(
           field: field,
-          value: value is double ? value : (value is num ? value.toDouble() : null),
+          value: value is double
+              ? value
+              : (value is num ? value.toDouble() : null),
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.timePicker:
@@ -321,10 +313,7 @@ class _RjFormState extends State<RjForm> {
           value: value is TimeOfDay ? value : null,
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.spinner:
@@ -333,10 +322,7 @@ class _RjFormState extends State<RjForm> {
           value: value is int ? value : (value is num ? value.toInt() : null),
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.toggle:
@@ -345,10 +331,7 @@ class _RjFormState extends State<RjForm> {
           value: value is bool ? value : null,
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.radio:
@@ -358,32 +341,23 @@ class _RjFormState extends State<RjForm> {
           value: value?.toString(),
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
 
       case FieldType.chip:
-        final selected = value is List
-            ? value.whereType<String>().toList()
-            : <String>[];
+        final selected =
+            value is List ? value.whereType<String>().toList() : <String>[];
         return RjChipField(
           field: field,
           options: field.options,
           value: selected,
           errorText: error,
           theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValue(field.key, v);
-            _controller.clearError(field.key);
-          },
+          onChanged: (v) => _setValue(field.key, v),
         );
     }
   }
 }
-
-// ─── Submit Button ──────────────────────────────────────────────────────────
 
 class _SubmitButton extends StatelessWidget {
   final String label;
@@ -405,8 +379,7 @@ class _SubmitButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              theme.submitButtonColor ?? theme.primaryColor,
+          backgroundColor: theme.submitButtonColor ?? theme.primaryColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(

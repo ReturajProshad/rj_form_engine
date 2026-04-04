@@ -6,10 +6,11 @@ import '../../theme/form_theme.dart';
 
 class RjImageField extends StatefulWidget {
   final FieldMeta field;
-  final List<String> value; // list of file paths
+  final List<String> value;
   final String? errorText;
   final RjFormTheme theme;
   final void Function(List<String> paths) onChanged;
+  final void Function(String error)? onValidationError;
 
   const RjImageField({
     super.key,
@@ -18,6 +19,7 @@ class RjImageField extends StatefulWidget {
     required this.onChanged,
     required this.theme,
     this.errorText,
+    this.onValidationError,
   });
 
   @override
@@ -29,7 +31,7 @@ class _RjImageFieldState extends State<RjImageField> {
 
   Future<void> _pick() async {
     if (widget.value.length >= widget.field.maxImages) {
-      _snack('Maximum ${widget.field.maxImages} image(s) allowed.');
+      _showError('Maximum ${widget.field.maxImages} image(s) allowed.');
       return;
     }
 
@@ -47,23 +49,24 @@ class _RjImageFieldState extends State<RjImageField> {
 
     if (size > widget.field.maxImageSizeBytes) {
       final maxMb =
-          (widget.field.maxImageSizeBytes / (1024 * 1024)).toStringAsFixed(0);
-      _snack('Image must be smaller than ${maxMb}MB.');
+          (widget.field.maxImageSizeBytes / (1024 * 1024)).toStringAsFixed(1);
+      _showError('Image must be smaller than ${maxMb}MB.');
       return;
     }
 
     widget.onChanged([...widget.value, picked.path]);
   }
 
+  void _showError(String message) {
+    widget.onValidationError?.call(message);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _remove(int index) {
     final updated = List<String>.from(widget.value)..removeAt(index);
     widget.onChanged(updated);
-  }
-
-  void _snack(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override

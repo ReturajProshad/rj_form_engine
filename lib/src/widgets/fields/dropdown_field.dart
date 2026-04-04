@@ -109,6 +109,7 @@ class _RjDropdownFieldState extends State<RjDropdownField> {
 
     // When this field depends on a parent but parent has no value yet
     if (widget.field.dependsOn != null && widget.parentValue == null) {
+      // ignore: deprecated_member_use
       return DropdownButtonFormField<String>(
         value: null,
         items: const [],
@@ -121,28 +122,33 @@ class _RjDropdownFieldState extends State<RjDropdownField> {
       );
     }
 
-    return DropdownButtonFormField<String>(
-      value: _items.any((e) => e.id == widget.value) ? widget.value : null,
-      isExpanded: true,
-      decoration: widget.theme.inputDecoration(
-        label: widget.field.label,
-        hint: widget.field.hint ?? 'Select ${widget.field.label}',
-        errorText: widget.errorText,
-      ),
-      style: widget.theme.inputStyle ??
-          const TextStyle(fontSize: 14, color: Color(0xFF111827)),
-      items: _items
-          .map(
-            (item) => DropdownMenuItem<String>(
-              value: item.id,
-              child: Text(
-                item.label,
-                overflow: TextOverflow.ellipsis,
+    return Semantics(
+      label: widget.field.label,
+      hint: 'Tap to select an option',
+      child: DropdownButtonFormField<String>(
+        // ignore: deprecated_member_use
+        value: _items.any((e) => e.id == widget.value) ? widget.value : null,
+        isExpanded: true,
+        decoration: widget.theme.inputDecoration(
+          label: widget.field.label,
+          hint: widget.field.hint ?? 'Select ${widget.field.label}',
+          errorText: widget.errorText,
+        ),
+        style: widget.theme.inputStyle ??
+            const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+        items: _items
+            .map(
+              (item) => DropdownMenuItem<String>(
+                value: item.id,
+                child: Text(
+                  item.label,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          )
-          .toList(),
-      onChanged: widget.onChanged,
+            )
+            .toList(),
+        onChanged: widget.onChanged,
+      ),
     );
   }
 

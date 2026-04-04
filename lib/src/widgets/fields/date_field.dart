@@ -55,9 +55,29 @@ class _RjDateFieldState extends State<RjDateField> {
 
   String _format(DateTime? date) {
     if (date == null) return '';
+    final format = widget.field.dateFormat;
+    if (format != null) {
+      return _applyFormat(date, format);
+    }
     return '${date.year.toString().padLeft(4, '0')}-'
         '${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _applyFormat(DateTime date, String format) {
+    return format
+        .replaceAll('yyyy', date.year.toString().padLeft(4, '0'))
+        .replaceAll('yy', date.year.toString().substring(2))
+        .replaceAll('MM', date.month.toString().padLeft(2, '0'))
+        .replaceAll('M', date.month.toString())
+        .replaceAll('dd', date.day.toString().padLeft(2, '0'))
+        .replaceAll('d', date.day.toString());
+  }
+
+  String get _hintText {
+    final format = widget.field.dateFormat;
+    if (format != null) return format;
+    return 'YYYY-MM-DD';
   }
 
   Future<void> _pickDate() async {
@@ -87,22 +107,26 @@ class _RjDateFieldState extends State<RjDateField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: _controller,
-      focusNode: _focusNode,
-      readOnly: true,
-      onTap: _pickDate,
-      style: widget.theme.inputStyle ??
-          const TextStyle(fontSize: 14, color: Color(0xFF111827)),
-      decoration: widget.theme.inputDecoration(
-        label: widget.field.label,
-        hint: widget.field.hint ?? 'YYYY-MM-DD',
-        errorText: widget.errorText,
-        isFocused: _isFocused,
-        suffixIcon: Icon(
-          Icons.calendar_today_outlined,
-          size: 18,
-          color: widget.theme.primaryColor,
+    return Semantics(
+      label: '${widget.field.label} date picker',
+      hint: 'Tap to select a date',
+      child: TextFormField(
+        controller: _controller,
+        focusNode: _focusNode,
+        readOnly: true,
+        onTap: _pickDate,
+        style: widget.theme.inputStyle ??
+            const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+        decoration: widget.theme.inputDecoration(
+          label: widget.field.label,
+          hint: widget.field.hint ?? _hintText,
+          errorText: widget.errorText,
+          isFocused: _isFocused,
+          suffixIcon: Icon(
+            Icons.calendar_today_outlined,
+            size: 18,
+            color: widget.theme.primaryColor,
+          ),
         ),
       ),
     );

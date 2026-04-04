@@ -1,0 +1,11 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_const_constructors: false
+    prefer_const_declarations: false
+    avoid_print: true
+    prefer_single_quotes: false
+    sort_constructors_first: false
+    unnecessary_this: false
+    require_trailing_commas: false

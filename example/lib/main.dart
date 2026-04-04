@@ -10,9 +10,9 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 Future<List<DropdownItem>> fetchCountries([_]) async {
   await Future.delayed(const Duration(milliseconds: 500));
   return [
-    DropdownItem(id: 'bd', label: 'Bangladesh'),
-    DropdownItem(id: 'us', label: 'United States'),
-    DropdownItem(id: 'in', label: 'India'),
+    const DropdownItem(id: 'bd', label: 'Bangladesh'),
+    const DropdownItem(id: 'us', label: 'United States'),
+    const DropdownItem(id: 'in', label: 'India'),
   ];
 }
 
@@ -32,9 +32,7 @@ Future<List<DropdownItem>> fetchCities([dynamic country]) async {
       {'id': 'del', 'label': 'Delhi'},
     ],
   };
-  return (map[country] ?? [])
-      .map((e) => DropdownItem(id: e['id']!, label: e['label']!))
-      .toList();
+  return (map[country] ?? []).map((e) => DropdownItem(id: e['id']!, label: e['label']!)).toList();
 }
 
 // ─── Field definitions ────────────────────────────────────────────────────────
@@ -91,7 +89,7 @@ final _fields = [
   ),
 
   // ── Time picker ──
-  FieldMeta(
+  const FieldMeta(
     key: 'preferred_time',
     label: 'Preferred Contact Time',
     type: FieldType.timePicker,
@@ -123,14 +121,14 @@ final _fields = [
     label: 'Account Status',
     type: FieldType.dropdown,
     dropdownSource: DropdownSource.static([
-      DropdownItem(id: 'active', label: 'Active'),
-      DropdownItem(id: 'inactive', label: 'Inactive'),
-      DropdownItem(id: 'pending', label: 'Pending Review'),
+      const DropdownItem(id: 'active', label: 'Active'),
+      const DropdownItem(id: 'inactive', label: 'Inactive'),
+      const DropdownItem(id: 'pending', label: 'Pending Review'),
     ]),
   ),
 
   // ── Radio ──
-  FieldMeta(
+  const FieldMeta(
     key: 'gender',
     label: 'Gender',
     type: FieldType.radio,
@@ -150,12 +148,12 @@ final _fields = [
     required: true,
     validators: [RjValidators.minSelect(1, message: 'Pick at least one interest')],
     options: [
-      DropdownItem(id: 'tech', label: 'Technology'),
-      DropdownItem(id: 'agri', label: 'Agriculture'),
-      DropdownItem(id: 'finance', label: 'Finance'),
-      DropdownItem(id: 'health', label: 'Healthcare'),
-      DropdownItem(id: 'edu', label: 'Education'),
-      DropdownItem(id: 'erp', label: 'ERP Systems'),
+      const DropdownItem(id: 'tech', label: 'Technology'),
+      const DropdownItem(id: 'agri', label: 'Agriculture'),
+      const DropdownItem(id: 'finance', label: 'Finance'),
+      const DropdownItem(id: 'health', label: 'Healthcare'),
+      const DropdownItem(id: 'edu', label: 'Education'),
+      const DropdownItem(id: 'erp', label: 'ERP Systems'),
     ],
   ),
 
@@ -182,7 +180,7 @@ final _fields = [
   ),
 
   // ── Toggle ──
-  FieldMeta(
+  const FieldMeta(
     key: 'notifications',
     label: 'Enable Notifications',
     type: FieldType.toggle,
@@ -199,7 +197,7 @@ final _fields = [
   ),
 
   // ── Image upload ──
-  FieldMeta(
+  const FieldMeta(
     key: 'profile_image',
     label: 'Profile Photo',
     type: FieldType.image,

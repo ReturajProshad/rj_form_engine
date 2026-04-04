@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rj_form_engine/rj_form_engine.dart';
 
 // Helpers
-Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
+Widget _wrap(Widget child) =>
+    MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
 
-final _textField = FieldMeta(key: 'name', label: 'Full Name', type: FieldType.text, required: true);
-final _numberField = FieldMeta(key: 'age', label: 'Age', type: FieldType.number);
-final _textAreaField = FieldMeta(key: 'bio', label: 'Bio', type: FieldType.textArea);
-final _dateField = FieldMeta(key: 'dob', label: 'Date of Birth', type: FieldType.date);
+final _textField = FieldMeta(
+    key: 'name', label: 'Full Name', type: FieldType.text, required: true);
+final _numberField =
+    FieldMeta(key: 'age', label: 'Age', type: FieldType.number);
+final _textAreaField =
+    FieldMeta(key: 'bio', label: 'Bio', type: FieldType.textArea);
 final _staticDropdown = FieldMeta(
   key: 'status',
   label: 'Status',
@@ -48,7 +52,8 @@ void main() {
       expect(find.text('Save Profile'), findsOneWidget);
     });
 
-    testWidgets('hides submit button when hideSubmitButton is true', (tester) async {
+    testWidgets('hides submit button when hideSubmitButton is true',
+        (tester) async {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField],
@@ -61,7 +66,8 @@ void main() {
       expect(find.text('Submit'), findsNothing);
     });
 
-    testWidgets('shows validation error when required field is empty', (tester) async {
+    testWidgets('shows validation error when required field is empty',
+        (tester) async {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField],
@@ -76,7 +82,8 @@ void main() {
       expect(find.text('Full Name is required'), findsOneWidget);
     });
 
-    testWidgets('does not show error when required field has value', (tester) async {
+    testWidgets('does not show error when required field has value',
+        (tester) async {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField],
@@ -123,7 +130,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      final field = tester.widget<TextFormField>(find.byType(TextFormField).first);
+      final field =
+          tester.widget<TextFormField>(find.byType(TextFormField).first);
       expect(field.controller?.text, 'Prefilled');
     });
 
@@ -193,7 +201,8 @@ void main() {
       expect(find.text('Other Detail'), findsOneWidget);
     });
 
-    testWidgets('viewOnly mode renders all fields as non-interactive', (tester) async {
+    testWidgets('viewOnly mode renders all fields as non-interactive',
+        (tester) async {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField, _numberField],
@@ -208,7 +217,8 @@ void main() {
       expect(find.text('Submit'), findsNothing);
     });
 
-    testWidgets('external controller receives submitted values', (tester) async {
+    testWidgets('external controller receives submitted values',
+        (tester) async {
       final ctrl = FormController();
       addTearDown(ctrl.dispose);
 
@@ -254,7 +264,9 @@ void main() {
           key: 'email',
           label: 'Email',
           type: FieldType.text,
-          validators: [(v) => (v is String && !v.contains('@')) ? 'Invalid email' : null],
+          validators: [
+            (v) => (v is String && !v.contains('@')) ? 'Invalid email' : null
+          ],
         ),
       ];
 
@@ -269,5 +281,133 @@ void main() {
 
       expect(find.text('Invalid email'), findsOneWidget);
     });
+
+    testWidgets('onChanged callback fires on value change', (tester) async {
+      final changes = <MapEntry<String, dynamic>>[];
+
+      await tester.pumpWidget(_wrap(
+        RjForm(
+          fields: [_textField],
+          onSubmit: (_) async {},
+          onChanged: (key, value) {
+            changes.add(MapEntry(key, value));
+          },
+        ),
+      ));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Test');
+      await tester.pump();
+
+      expect(changes.length, 1);
+      expect(changes[0].key, 'name');
+      expect(changes[0].value, 'Test');
+    });
+
+    testWidgets('showErrorsSummary displays error summary', (tester) async {
+      final fields = [
+        FieldMeta(
+            key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta(
+            key: 'email', label: 'Email', type: FieldType.text, required: true),
+      ];
+
+      await tester.pumpWidget(_wrap(
+        RjForm(
+          fields: fields,
+          onSubmit: (_) async {},
+          showErrorsSummary: true,
+        ),
+      ));
+      await tester.pump();
+
+      await tester.tap(find.text('Submit'));
+      await tester.pump();
+
+      expect(find.text('Please fix the following errors:'), findsOneWidget);
+    });
+
+    test('NumberInputFormatter prevents invalid input', () {
+      final formatter = _NumberInputFormatter();
+
+      expect(
+        formatter
+            .formatEditUpdate(
+              const TextEditingValue(text: ''),
+              const TextEditingValue(text: '12.34'),
+            )
+            .text,
+        '12.34',
+      );
+
+      expect(
+        formatter
+            .formatEditUpdate(
+              const TextEditingValue(text: '12.34'),
+              const TextEditingValue(text: '12.34.5'),
+            )
+            .text,
+        '12.34',
+      );
+
+      expect(
+        formatter
+            .formatEditUpdate(
+              const TextEditingValue(text: ''),
+              const TextEditingValue(text: '--5'),
+            )
+            .text,
+        '',
+      );
+
+      expect(
+        formatter
+            .formatEditUpdate(
+              const TextEditingValue(text: ''),
+              const TextEditingValue(text: '-5'),
+            )
+            .text,
+        '-5',
+      );
+    });
   });
+}
+
+class _NumberInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    if (text.isEmpty) return newValue;
+
+    final minusCount = text
+        .splitMapJoin(
+          RegExp(r'-'),
+          onMatch: (_) => '-',
+          onNonMatch: (_) => '',
+        )
+        .length;
+
+    if (minusCount > 1) return oldValue;
+    if (minusCount == 1 && !text.startsWith('-')) return oldValue;
+
+    final dotCount = text
+        .splitMapJoin(
+          RegExp(r'\.'),
+          onMatch: (_) => '.',
+          onNonMatch: (_) => '',
+        )
+        .length;
+
+    if (dotCount > 1) return oldValue;
+
+    if (text == '-' || text == '-.' || text == '.') return newValue;
+
+    final number = num.tryParse(text);
+    if (number == null) return oldValue;
+
+    return newValue;
+  }
 }
