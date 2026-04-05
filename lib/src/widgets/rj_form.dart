@@ -1,10 +1,7 @@
 // =============================================================================
-// STEP 1 — PATCH: rj_form.dart
-// Fixes:
-//   A. errorsSummaryBuilder logic bug (called per-entry, shown N times)
-//   B. initialValues microtask flicker (Future.microtask in initState)
-//   C. Section key collision (empty key generates duplicate from label)
-//   D. DropdownButtonFormField deprecated initialValue usage
+// STEP 3 — PERFORMANCE REFACTOR
+// Problem: Entire form rebuilds on every keystroke
+// Solution: Per-field rebuild using FormFieldScope (InheritedWidget pattern)
 // =============================================================================
 
 import 'package:flutter/material.dart';
@@ -18,6 +15,480 @@ import 'fields/date_field.dart';
 import 'fields/dropdown_field.dart';
 import 'fields/image_field.dart';
 import 'fields/extra_fields.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. _FormScope — InheritedWidget to propagate controller without rebuilding
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FormScope extends InheritedWidget {
+  final FormController controller;
+  final RjFormTheme theme;
+  final List<FieldMeta> fields;
+  final bool viewOnly;
+  final void Function(String key, dynamic value)? onChanged;
+
+  const _FormScope({
+    required this.controller,
+    required this.theme,
+    required this.fields,
+    required this.viewOnly,
+    required this.onChanged,
+    required super.child,
+  });
+
+  @override
+  bool updateShouldNotify(_FormScope oldWidget) => false;
+
+  static _FormScope of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<_FormScope>();
+    assert(scope != null, '_FormScope not found in widget tree');
+    return scope!;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. _FieldBuilder — rebuilds ONLY when its own value or error changes
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FieldBuilder extends StatefulWidget {
+  final FieldMeta field;
+  final double width;
+  final void Function(String key, dynamic value) setValue;
+  final void Function(String key, dynamic value, List<FieldMeta> fields) setValueCascade;
+  final void Function(String key, String message) setError;
+
+  const _FieldBuilder({
+    required this.field,
+    required this.width,
+    required this.setValue,
+    required this.setValueCascade,
+    required this.setError,
+    super.key,
+  });
+
+  @override
+  State<_FieldBuilder> createState() => _FieldBuilderState();
+}
+
+class _FieldBuilderState extends State<_FieldBuilder> {
+  late FormController _controller;
+  dynamic _lastValue;
+  String? _lastError;
+  dynamic _lastParentValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = FormController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scope = _FormScope.of(context);
+    final newController = scope.controller;
+
+    if (!identical(_controller, newController)) {
+      _controller.removeListener(_onControllerChanged);
+      _controller = newController;
+      _controller.addListener(_onControllerChanged);
+      _syncState();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_FieldBuilder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.field.key != widget.field.key) {
+      _syncState();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  void _syncState() {
+    _lastValue = _controller.values[widget.field.key];
+    _lastError = _controller.errors[widget.field.key];
+    _lastParentValue = widget.field.dependency != null ? _controller.values[widget.field.dependency!.dependsOn] : null;
+  }
+
+  void _onControllerChanged() {
+    final currentValue = _controller.values[widget.field.key];
+    final currentError = _controller.errors[widget.field.key];
+    final currentParentValue = widget.field.dependency != null ? _controller.values[widget.field.dependency!.dependsOn] : null;
+
+    final valueChanged = currentValue != _lastValue;
+    final errorChanged = currentError != _lastError;
+    final parentChanged = currentParentValue != _lastParentValue;
+
+    if (valueChanged || errorChanged || parentChanged) {
+      setState(() {
+        _lastValue = currentValue;
+        _lastError = currentError;
+        _lastParentValue = currentParentValue;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = _FormScope.of(context);
+    final field = widget.field;
+
+    if (field.dependency != null && !field.dependency!.isVisible(_controller.values)) {
+      return const SizedBox.shrink();
+    }
+
+    final effectiveField = scope.viewOnly ? field.copyWith(viewOnly: true) : field;
+
+    return AbsorbPointer(
+      absorbing: effectiveField.viewOnly,
+      child: Opacity(
+        opacity: effectiveField.viewOnly ? 0.6 : 1.0,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: RjResponsive.fieldSpacing(widget.width)),
+          child: _buildFieldWidget(effectiveField, scope),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldWidget(FieldMeta field, _FormScope scope) {
+    final error = _lastError;
+    final value = _lastValue;
+    final width = widget.width;
+    final theme = scope.theme;
+
+    switch (field.type) {
+      case FieldType.text:
+        return RjTextField(
+          field: field,
+          value: value,
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.textArea:
+        return RjTextField(
+          field: field,
+          value: value,
+          errorText: error,
+          theme: theme,
+          maxLines: 4,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.number:
+        return RjNumberField(
+          field: field,
+          value: value,
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.date:
+        return RjDateField(
+          field: field,
+          value: value is DateTime ? value : null,
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.dropdown:
+        return RjDropdownField(
+          field: field,
+          value: value?.toString(),
+          parentValue: _lastParentValue,
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValueCascade(field.key, v, scope.fields),
+          width: width,
+        );
+
+      case FieldType.image:
+        final paths = value is List ? value.whereType<String>().toList() : <String>[];
+        return RjImageField(
+          field: field,
+          value: paths,
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          onValidationError: (msg) => widget.setError(field.key, msg),
+          width: width,
+        );
+
+      case FieldType.custom:
+        if (field.builder == null) {
+          return Text(
+            'FieldMeta.custom requires a builder for key: ${field.key}',
+            style: TextStyle(color: theme.errorColor),
+          );
+        }
+        return field.builder!(
+          context,
+          field,
+          value,
+          (v) => widget.setValue(field.key, v),
+          error,
+        );
+
+      case FieldType.slider:
+        return RjSliderField(
+          field: field,
+          value: value is double ? value : (value is num ? value.toDouble() : null),
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.timePicker:
+        return RjTimePickerField(
+          field: field,
+          value: value is TimeOfDay ? value : null,
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.spinner:
+        return RjSpinnerField(
+          field: field,
+          value: value is int ? value : (value is num ? value.toInt() : null),
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.toggle:
+        return RjToggleField(
+          field: field,
+          value: value is bool ? value : null,
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.radio:
+        return RjRadioField(
+          field: field,
+          options: field.options,
+          value: value?.toString(),
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.chip:
+        final selected = value is List ? value.whereType<String>().toList() : <String>[];
+        return RjChipField(
+          field: field,
+          options: field.options,
+          value: selected,
+          errorText: error,
+          theme: theme,
+          onChanged: (v) => widget.setValue(field.key, v),
+          width: width,
+        );
+
+      case FieldType.section:
+        return const SizedBox.shrink();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. _ErrorSummaryListener — only rebuilds when error map changes
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ErrorSummaryListener extends StatefulWidget {
+  final RjFormTheme theme;
+  final String? Function(Map<String, String> errors)? errorsSummaryBuilder;
+  final double width;
+
+  const _ErrorSummaryListener({
+    required this.theme,
+    required this.width,
+    this.errorsSummaryBuilder,
+  });
+
+  @override
+  State<_ErrorSummaryListener> createState() => _ErrorSummaryListenerState();
+}
+
+class _ErrorSummaryListenerState extends State<_ErrorSummaryListener> {
+  late FormController _controller;
+  Map<String, String> _lastErrors = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = FormController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final newController = _FormScope.of(context).controller;
+    if (!identical(_controller, newController)) {
+      _controller.removeListener(_onChanged);
+      _controller = newController;
+      _controller.addListener(_onChanged);
+      _lastErrors = Map.from(_controller.errors);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() {
+    if (_controller.errors.length != _lastErrors.length || _controller.errors.entries.any((e) => _lastErrors[e.key] != e.value)) {
+      setState(() {
+        _lastErrors = Map.from(_controller.errors);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_lastErrors.isEmpty) return const SizedBox.shrink();
+
+    final customMessage = widget.errorsSummaryBuilder?.call(_lastErrors);
+    final theme = widget.theme;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: RjResponsive.fieldSpacing(widget.width)),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.errorColor.withValues(alpha: 0.08),
+        borderRadius: theme.borderRadius,
+        border: Border.all(color: theme.errorColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline, color: theme.errorColor, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Please fix the following errors:',
+                style: TextStyle(
+                  color: theme.errorColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (customMessage != null)
+            Text(
+              customMessage,
+              style: TextStyle(
+                color: theme.errorColor,
+                fontSize: RjResponsive.errorFontSize(widget.width),
+              ),
+            )
+          else
+            ..._lastErrors.entries.map(
+              (e) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  '• ${e.value}',
+                  style: TextStyle(
+                    color: theme.errorColor,
+                    fontSize: RjResponsive.errorFontSize(widget.width),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. _SubmittingListener — only rebuilds when isSubmitting changes
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SubmittingListener extends StatefulWidget {
+  final ValueNotifier<bool> isSubmitting;
+  final String label;
+  final RjFormTheme theme;
+  final VoidCallback onPressed;
+  final double width;
+
+  const _SubmittingListener({
+    required this.isSubmitting,
+    required this.label,
+    required this.theme,
+    required this.onPressed,
+    required this.width,
+  });
+
+  @override
+  State<_SubmittingListener> createState() => _SubmittingListenerState();
+}
+
+class _SubmittingListenerState extends State<_SubmittingListener> {
+  @override
+  void initState() {
+    super.initState();
+    widget.isSubmitting.addListener(_onChanged);
+  }
+
+  @override
+  void didUpdateWidget(_SubmittingListener oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isSubmitting != widget.isSubmitting) {
+      oldWidget.isSubmitting.removeListener(_onChanged);
+      widget.isSubmitting.addListener(_onChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.isSubmitting.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SubmitButton(
+      label: widget.label,
+      isLoading: widget.isSubmitting.value,
+      theme: widget.theme,
+      onPressed: widget.onPressed,
+      width: widget.width,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. RjForm — updated to use _FormScope + _FieldBuilder
+// ─────────────────────────────────────────────────────────────────────────────
 
 class RjForm extends StatefulWidget {
   final List<FieldMeta> fields;
@@ -60,7 +531,8 @@ class RjForm extends StatefulWidget {
 class _RjFormState extends State<RjForm> {
   late final FormController _controller;
   late final bool _ownsController;
-  bool _isSubmitting = false;
+
+  final ValueNotifier<bool> _isSubmitting = ValueNotifier(false);
 
   @override
   void initState() {
@@ -68,58 +540,16 @@ class _RjFormState extends State<RjForm> {
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? FormController();
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // FIX B: initialValues — remove Future.microtask
-    //
-    // BEFORE (broken):
-    //   Future.microtask(() {
-    //     if (mounted) _controller.setAll(widget.initialValues!);
-    //   });
-    //
-    // WHY IT'S A BUG:
-    //   microtask defers execution until after the first build() completes.
-    //   This causes a guaranteed one-frame render with empty fields, which
-    //   produces a visible flash/flicker when opening pre-filled edit forms.
-    //   Users see blank fields for one frame, then values pop in.
-    //
-    // WHY THE FIX IS SAFE:
-    //   setAll() only calls notifyListeners(). At initState time, no listeners
-    //   have been attached yet (the widget hasn't been inserted into the tree).
-    //   So calling it synchronously here is perfectly safe — the first build()
-    //   will already see the correct values.
-    // ─────────────────────────────────────────────────────────────────────────
     if (widget.initialValues != null) {
-      _controller.setAll(widget.initialValues!); // ← synchronous, no flicker
+      _controller.setAll(widget.initialValues!);
     }
   }
 
   @override
   void dispose() {
     if (_ownsController) _controller.dispose();
+    _isSubmitting.dispose();
     super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final isValid = _controller.validate(widget.fields);
-    if (!isValid) {
-      if (widget.autoDismissKeyboard) {
-        FocusScope.of(context).unfocus();
-      }
-      return;
-    }
-    setState(() => _isSubmitting = true);
-    try {
-      final result = _controller.toResult();
-      await widget.onSubmit(result);
-      if (mounted) {
-        widget.onSuccess?.call(result);
-        if (widget.autoClearOnSubmit) {
-          _controller.clear();
-        }
-      }
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
   }
 
   void _setValue(String key, dynamic value) {
@@ -128,35 +558,66 @@ class _RjFormState extends State<RjForm> {
     widget.onChanged?.call(key, value);
   }
 
+  void _setValueCascade(String key, dynamic value, List<FieldMeta> fields) {
+    _controller.setValueAndClearDependents(key, value, fields);
+    _controller.clearError(key);
+    widget.onChanged?.call(key, value);
+  }
+
+  Future<void> _submit() async {
+    final isValid = _controller.validate(widget.fields);
+    if (!isValid) {
+      if (widget.autoDismissKeyboard) FocusScope.of(context).unfocus();
+      return;
+    }
+    _isSubmitting.value = true;
+    try {
+      final result = _controller.toResult();
+      await widget.onSubmit(result);
+      if (mounted) {
+        widget.onSuccess?.call(result);
+        if (widget.autoClearOnSubmit) _controller.clear();
+      }
+    } finally {
+      if (mounted) _isSubmitting.value = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    Widget content = LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        return ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (widget.showErrorsSummary && _controller.errors.isNotEmpty)
-                  _buildErrorsSummary(width),
-                ..._buildFields(width),
-                if (!widget.hideSubmitButton && !widget.viewOnly) ...[
-                  SizedBox(height: RjResponsive.fieldSpacing(width)),
-                  _SubmitButton(
-                    label: widget.submitLabel,
-                    isLoading: _isSubmitting,
-                    theme: widget.theme,
-                    onPressed: _submit,
-                    width: width,
-                  ),
-                ],
+    Widget content = _FormScope(
+      controller: _controller,
+      theme: widget.theme,
+      fields: widget.fields,
+      viewOnly: widget.viewOnly,
+      onChanged: widget.onChanged,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (widget.showErrorsSummary)
+                _ErrorSummaryListener(
+                  theme: widget.theme,
+                  width: width,
+                  errorsSummaryBuilder: widget.errorsSummaryBuilder,
+                ),
+              ..._buildFieldList(width),
+              if (!widget.hideSubmitButton && !widget.viewOnly) ...[
+                SizedBox(height: RjResponsive.fieldSpacing(width)),
+                _SubmittingListener(
+                  isSubmitting: _isSubmitting,
+                  label: widget.submitLabel,
+                  theme: widget.theme,
+                  onPressed: _submit,
+                  width: width,
+                ),
               ],
-            );
-          },
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
 
     if (widget.autoDismissKeyboard) {
@@ -169,115 +630,22 @@ class _RjFormState extends State<RjForm> {
     return content;
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // FIX A: errorsSummaryBuilder logic bug
-  //
-  // BEFORE (broken):
-  //   ..._controller.errors.entries.map(
-  //     (e) => Padding(
-  //       child: Text(
-  //         widget.errorsSummaryBuilder?.call(_controller.errors) ??
-  //             '• ${e.key}: ${e.value}',  // ← BUG
-  //       ),
-  //     ),
-  //   ),
-  //
-  // WHY IT'S A BUG:
-  //   The builder is called INSIDE the .map() over entries. So if there are
-  //   3 errors, the builder is called 3 times and returns the same full
-  //   custom string each time — displayed 3× in a column. The developer
-  //   who passes errorsSummaryBuilder expects it to replace the entire
-  //   error list, not be repeated once per error.
-  //
-  // AFTER: Call the builder once (outside .map), use its result as a single
-  //        replacement for the entire list. If it returns null, fall back to
-  //        the default per-error bullet list.
-  // ───────────────────────────────────────────────────────────────────────────
-  Widget _buildErrorsSummary(double width) {
-    // Call builder ONCE for the whole errors map.
-    final customMessage = widget.errorsSummaryBuilder?.call(_controller.errors);
-
-    return Container(
-      margin: EdgeInsets.only(bottom: RjResponsive.fieldSpacing(width)),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: widget.theme.errorColor.withValues(alpha: 0.08),
-        borderRadius: widget.theme.borderRadius,
-        border: Border.all(
-          color: widget.theme.errorColor.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.error_outline,
-                  color: widget.theme.errorColor, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                'Please fix the following errors:',
-                style: TextStyle(
-                  color: widget.theme.errorColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // ── FIXED: custom builder replaces the list entirely ──
-          if (customMessage != null)
-            Text(
-              customMessage,
-              style: TextStyle(
-                color: widget.theme.errorColor,
-                fontSize: RjResponsive.errorFontSize(width),
-              ),
-            )
-          else
-            // Default: one bullet per error
-            ..._controller.errors.entries.map(
-              (e) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  '• ${e.value}',
-                  style: TextStyle(
-                    color: widget.theme.errorColor,
-                    fontSize: RjResponsive.errorFontSize(width),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildFields(double width) {
+  List<Widget> _buildFieldList(double width) {
     final widgets = <Widget>[];
     for (final field in widget.fields) {
       if (field.type == FieldType.section) {
         widgets.add(_buildSection(field, width));
         continue;
       }
-      if (field.dependency != null &&
-          !field.dependency!.isVisible(_controller.values)) {
-        continue;
-      }
-      final effectiveField =
-          widget.viewOnly ? field.copyWith(viewOnly: true) : field;
+
       widgets.add(
-        AbsorbPointer(
-          absorbing: effectiveField.viewOnly,
-          child: Opacity(
-            opacity: effectiveField.viewOnly ? 0.6 : 1.0,
-            child: Padding(
-              padding:
-                  EdgeInsets.only(bottom: RjResponsive.fieldSpacing(width)),
-              child: _buildField(effectiveField, width),
-            ),
-          ),
+        _FieldBuilder(
+          key: ValueKey(field.key),
+          field: field,
+          width: width,
+          setValue: _setValue,
+          setValueCascade: _setValueCascade,
+          setError: _controller.setError,
         ),
       );
     }
@@ -292,9 +660,7 @@ class _RjFormState extends State<RjForm> {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Divider(color: widget.theme.borderColor, thickness: 1),
-          ),
+          Expanded(child: Divider(color: widget.theme.borderColor, thickness: 1)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
@@ -308,161 +674,16 @@ class _RjFormState extends State<RjForm> {
                   ),
             ),
           ),
-          Expanded(
-            child: Divider(color: widget.theme.borderColor, thickness: 1),
-          ),
+          Expanded(child: Divider(color: widget.theme.borderColor, thickness: 1)),
         ],
       ),
     );
   }
-
-  Widget _buildField(FieldMeta field, double width) {
-    final error = _controller.errors[field.key];
-    final value = _controller.values[field.key];
-
-    switch (field.type) {
-      case FieldType.text:
-        return RjTextField(
-          field: field,
-          value: value,
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.textArea:
-        return RjTextField(
-          field: field,
-          value: value,
-          errorText: error,
-          theme: widget.theme,
-          maxLines: 4,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.number:
-        return RjNumberField(
-          field: field,
-          value: value,
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.date:
-        return RjDateField(
-          field: field,
-          value: value is DateTime ? value : null,
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.dropdown:
-        final parentValue = field.dependency?.dependsOn != null
-            ? _controller.values[field.dependency!.dependsOn]
-            : null;
-        return RjDropdownField(
-          field: field,
-          value: value?.toString(),
-          parentValue: parentValue,
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) {
-            _controller.setValueAndClearDependents(field.key, v, widget.fields);
-            _controller.clearError(field.key);
-            widget.onChanged?.call(field.key, v);
-          },
-          width: width,
-        );
-      case FieldType.image:
-        final paths =
-            value is List ? value.whereType<String>().toList() : <String>[];
-        return RjImageField(
-          field: field,
-          value: paths,
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          onValidationError: (msg) => _controller.setError(field.key, msg),
-          width: width,
-        );
-      case FieldType.custom:
-        if (field.builder == null) {
-          return Text(
-            'FieldMeta.custom requires a builder for key: ${field.key}',
-            style: TextStyle(color: widget.theme.errorColor),
-          );
-        }
-        return field.builder!(
-            context, field, value, (v) => _setValue(field.key, v), error);
-      case FieldType.slider:
-        return RjSliderField(
-          field: field,
-          value: value is double
-              ? value
-              : (value is num ? value.toDouble() : null),
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.timePicker:
-        return RjTimePickerField(
-          field: field,
-          value: value is TimeOfDay ? value : null,
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.spinner:
-        return RjSpinnerField(
-          field: field,
-          value: value is int ? value : (value is num ? value.toInt() : null),
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.toggle:
-        return RjToggleField(
-          field: field,
-          value: value is bool ? value : null,
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.radio:
-        return RjRadioField(
-          field: field,
-          options: field.options,
-          value: value?.toString(),
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.chip:
-        final selected =
-            value is List ? value.whereType<String>().toList() : <String>[];
-        return RjChipField(
-          field: field,
-          options: field.options,
-          value: selected,
-          errorText: error,
-          theme: widget.theme,
-          onChanged: (v) => _setValue(field.key, v),
-          width: width,
-        );
-      case FieldType.section:
-        return const SizedBox.shrink();
-    }
-  }
 }
 
-// ─── Submit button (unchanged) ────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// _SubmitButton (unchanged internal widget)
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _SubmitButton extends StatelessWidget {
   final String label;
