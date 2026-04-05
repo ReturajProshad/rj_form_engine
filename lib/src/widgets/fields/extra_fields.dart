@@ -141,10 +141,13 @@ class RjSliderField extends StatelessWidget {
     );
   }
 }
-
 // ─── Time Picker ─────────────────────────────────────────────────────────────
+//
+// CHANGE: StatelessWidget → StatefulWidget
+// REASON: Needs to own and dispose a TextEditingController.
+//         Without this the controller leaks on every rebuild.
 
-class RjTimePickerField extends StatelessWidget {
+class RjTimePickerField extends StatefulWidget {
   final FieldMeta field;
   final TimeOfDay? value;
   final String? errorText;
@@ -162,53 +165,92 @@ class RjTimePickerField extends StatelessWidget {
     this.width = 0,
   });
 
+  @override
+  State<RjTimePickerField> createState() => _RjTimePickerFieldState();
+}
+
+class _RjTimePickerFieldState extends State<RjTimePickerField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Create ONCE. Never recreate in build().
+    _controller = TextEditingController(text: _format(widget.value));
+  }
+
+  @override
+  void didUpdateWidget(RjTimePickerField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sync text when the parent passes a new value (e.g. pre-fill or reset).
+    final formatted = _format(widget.value);
+    if (_controller.text != formatted) {
+      _controller.text = formatted;
+    }
+  }
+
+  @override
+  void dispose() {
+    // FIXED: Controller is now properly disposed.
+    _controller.dispose();
+    super.dispose();
+  }
+
   String _format(TimeOfDay? t) {
     if (t == null) return '';
-    final format = field.timeFormat;
-    if (format != null) {
-      return RjTimeUtils.format(t, format: format);
-    }
+    final format = widget.field.timeFormat;
+    if (format != null) return RjTimeUtils.format(t, format: format);
     return RjTimeUtils.format(t);
   }
 
-  Future<void> _pick(BuildContext context) async {
+  Future<void> _pick() async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: value ?? TimeOfDay.now(),
+      initialTime: widget.value ?? TimeOfDay.now(),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(primary: theme.primaryColor),
+          colorScheme: ColorScheme.light(
+            primary: widget.theme.primaryColor,
+          ),
         ),
         child: child!,
       ),
     );
-    if (picked != null) onChanged(picked);
+    if (picked != null) {
+      _controller.text = _format(picked);
+      widget.onChanged(picked);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       readOnly: true,
-      controller: TextEditingController(text: _format(value)),
-      onTap: () => _pick(context),
-      style: theme.inputStyle ??
+      controller: _controller,
+      onTap: _pick,
+      style: widget.theme.inputStyle ??
           TextStyle(
-            fontSize: RjResponsive.inputFontSize(width),
+            fontSize: RjResponsive.inputFontSize(widget.width),
             color: const Color(0xFF111827),
           ),
-      decoration: theme.inputDecoration(
-        label: field.label,
-        hint: field.hint ?? 'Select time',
-        errorText: errorText,
+      decoration: widget.theme.inputDecoration(
+        label: widget.field.label,
+        hint: widget.field.hint ?? 'Select time',
+        errorText: widget.errorText,
         suffixIcon: Icon(
           Icons.access_time_rounded,
-          size: RjResponsive.suffixIconSize(width),
-          color: theme.primaryColor,
+          size: RjResponsive.suffixIconSize(widget.width),
+          color: widget.theme.primaryColor,
         ),
       ),
     );
   }
 }
+
+// NOTE: RjDateField already uses StatefulWidget correctly (see date_field.dart).
+// Its _controller is created in initState and disposed in dispose(). No fix needed.
+// The only oversight in date_field.dart is that didUpdateWidget updates
+// _controller.text correctly — that is already implemented. ✓
 
 // ─── Spinner (Number Stepper) ─────────────────────────────────────────────────
 

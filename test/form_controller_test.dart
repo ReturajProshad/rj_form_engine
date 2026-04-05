@@ -100,7 +100,8 @@ void main() {
 
     test('validate returns true when all required fields are filled', () {
       final fields = [
-        FieldMeta(key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta(
+            key: 'name', label: 'Name', type: FieldType.text, required: true),
       ];
       controller.setValue('name', 'John');
 
@@ -110,7 +111,8 @@ void main() {
 
     test('validate returns false and sets error for empty required field', () {
       final fields = [
-        FieldMeta(key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta(
+            key: 'name', label: 'Name', type: FieldType.text, required: true),
       ];
 
       expect(controller.validate(fields), false);
@@ -119,7 +121,8 @@ void main() {
 
     test('validate treats whitespace-only string as empty', () {
       final fields = [
-        FieldMeta(key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta(
+            key: 'name', label: 'Name', type: FieldType.text, required: true),
       ];
       controller.setValue('name', '   ');
 
@@ -133,7 +136,9 @@ void main() {
           key: 'age',
           label: 'Age',
           type: FieldType.number,
-          validators: [(v) => (v is num && v < 0) ? 'Age must be positive' : null],
+          validators: [
+            (v) => (v is num && v < 0) ? 'Age must be positive' : null
+          ],
         ),
       ];
       controller.setValue('age', -5);
@@ -144,7 +149,8 @@ void main() {
 
     test('validate skips hidden fields', () {
       final fields = [
-        FieldMeta(key: 'type', label: 'Type', type: FieldType.text, required: true),
+        FieldMeta(
+            key: 'type', label: 'Type', type: FieldType.text, required: true),
         FieldMeta(
           key: 'other',
           label: 'Other',
@@ -164,7 +170,11 @@ void main() {
 
     test('validate treats empty list as empty for required image field', () {
       final fields = [
-        FieldMeta(key: 'photo', label: 'Photo', type: FieldType.image, required: true),
+        FieldMeta(
+            key: 'photo',
+            label: 'Photo',
+            type: FieldType.image,
+            required: true),
       ];
       controller.setValue('photo', <String>[]);
 
@@ -174,7 +184,8 @@ void main() {
 
     test('validate clears previous errors before re-validating', () {
       final fields = [
-        FieldMeta(key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta(
+            key: 'name', label: 'Name', type: FieldType.text, required: true),
       ];
 
       controller.validate(fields); // sets error
@@ -292,7 +303,7 @@ void main() {
     });
 
     test('async source resolves with loader', () async {
-      final source = DropdownSource.async(([parentValue]) async {
+      final source = DropdownSource.async(({parentValue}) async {
         return [DropdownItem(id: 'x', label: 'X')];
       });
 
@@ -302,12 +313,12 @@ void main() {
 
     test('async source receives parentValue for cascading', () async {
       dynamic received;
-      final source = DropdownSource.async(([parentValue]) async {
+      final source = DropdownSource.async(({parentValue}) async {
         received = parentValue;
         return [];
       });
 
-      await source.resolve('bd');
+      await source.resolve(parentValue: 'bd');
       expect(received, 'bd');
     });
   });

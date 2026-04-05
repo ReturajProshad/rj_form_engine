@@ -1,5 +1,11 @@
 import 'dropdown_item.dart';
 
+/// Signature for async dropdown loaders.
+/// [parentValue] is the current value of the parent field (for cascading).
+typedef DropdownLoader = Future<List<DropdownItem>> Function({
+  String? parentValue,
+});
+
 /// Defines how a dropdown field loads its items.
 ///
 /// Use [DropdownSource.static] for a fixed list known at build time.
@@ -20,7 +26,7 @@ import 'dropdown_item.dart';
 /// Example — async with cascade:
 /// ```dart
 /// DropdownSource.async(
-///   (parentValue) async => fetchCitiesByCountry(parentValue),
+///   ({parentValue}) async => fetchCitiesByCountry(parentValue),
 /// )
 /// ```
 abstract class DropdownSource {
@@ -31,29 +37,36 @@ abstract class DropdownSource {
       _StaticDropdownSource(items);
 
   /// An async loader. Receives the parent field's value when this field
-  /// depends on another field (cascading). Otherwise [parentValue] is null.
-  factory DropdownSource.async(
-    Future<List<DropdownItem>> Function([dynamic parentValue]) loader,
-  ) =>
+  /// depends on another (cascading). Otherwise [parentValue] is null.
+  ///
+  /// ```dart
+  /// DropdownSource.async(
+  ///   ({parentValue}) async => fetchCitiesByCountry(parentValue),
+  /// )
+  /// ```
+  factory DropdownSource.async(DropdownLoader loader) =>
       _AsyncDropdownSource(loader);
 
   /// Resolves the items. Called internally by the engine.
-  Future<List<DropdownItem>> resolve([dynamic parentValue]);
+  /// [parentValue] is passed from [FieldDependency.dependsOn].
+  Future<List<DropdownItem>> resolve({String? parentValue});
 }
 
 class _StaticDropdownSource extends DropdownSource {
   final List<DropdownItem> _items;
+
   const _StaticDropdownSource(this._items) : super._();
 
   @override
-  Future<List<DropdownItem>> resolve([dynamic parentValue]) async => _items;
+  Future<List<DropdownItem>> resolve({String? parentValue}) async => _items;
 }
 
 class _AsyncDropdownSource extends DropdownSource {
-  final Future<List<DropdownItem>> Function([dynamic parentValue]) _loader;
+  final DropdownLoader _loader;
+
   const _AsyncDropdownSource(this._loader) : super._();
 
   @override
-  Future<List<DropdownItem>> resolve([dynamic parentValue]) =>
-      _loader(parentValue);
+  Future<List<DropdownItem>> resolve({String? parentValue}) =>
+      _loader(parentValue: parentValue);
 }

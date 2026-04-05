@@ -7,7 +7,7 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 // ─── Mock async loaders ───────────────────────────────────────────────────────
 
-Future<List<DropdownItem>> fetchCountries([_]) async {
+Future<List<DropdownItem>> fetchCountries({String? parentValue}) async {
   await Future.delayed(const Duration(milliseconds: 500));
   return [
     const DropdownItem(id: 'bd', label: 'Bangladesh'),
@@ -16,7 +16,7 @@ Future<List<DropdownItem>> fetchCountries([_]) async {
   ];
 }
 
-Future<List<DropdownItem>> fetchCities([dynamic country]) async {
+Future<List<DropdownItem>> fetchCities({String? parentValue}) async {
   await Future.delayed(const Duration(milliseconds: 400));
   const map = {
     'bd': [
@@ -32,7 +32,9 @@ Future<List<DropdownItem>> fetchCities([dynamic country]) async {
       {'id': 'del', 'label': 'Delhi'},
     ],
   };
-  return (map[country] ?? []).map((e) => DropdownItem(id: e['id']!, label: e['label']!)).toList();
+  return (map[parentValue] ?? [])
+      .map((e) => DropdownItem(id: e['id']!, label: e['label']!))
+      .toList();
 }
 
 // ─── Field definitions ────────────────────────────────────────────────────────
@@ -107,7 +109,7 @@ final _fields = [
     key: 'city',
     label: 'City',
     type: FieldType.dropdown,
-    dependsOn: 'country',
+    // dependsOn: 'country',
     dependency: FieldDependency(
       dependsOn: 'country',
       condition: (v) => v != null,
@@ -146,7 +148,9 @@ final _fields = [
     label: 'Interests',
     type: FieldType.chip,
     required: true,
-    validators: [RjValidators.minSelect(1, message: 'Pick at least one interest')],
+    validators: [
+      RjValidators.minSelect(1, message: 'Pick at least one interest')
+    ],
     options: [
       const DropdownItem(id: 'tech', label: 'Technology'),
       const DropdownItem(id: 'agri', label: 'Agriculture'),
@@ -212,13 +216,13 @@ final _fields = [
     validators: [
       (v) => (v == null || v == 0) ? 'Please give a rating' : null,
     ],
-    builder: (context, value, onChanged, errorText) {
+    builder: (context, field, value, onChanged, errorText) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Satisfaction Rating *',
-            style: TextStyle(
+          Text(
+            '${field.label}${field.required ? ' *' : ''}',
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: Color(0xFF374151),
@@ -401,7 +405,9 @@ class _ShowcasePageState extends State<ShowcasePage> {
             final result = _controller.toResult();
             setState(() => _submitted = result.values);
             messengerKey.currentState?.showSnackBar(
-              SnackBar(content: Text('FAB submitted: ${result.values.length} fields')),
+              SnackBar(
+                  content:
+                      Text('FAB submitted: ${result.values.length} fields')),
             );
           }
         },
