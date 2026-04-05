@@ -5,7 +5,7 @@
   "packages": [
     {
       "name": "rj_form_engine",
-      "version": "0.0.1",
+      "version": "0.2.0",
       "dependencies": [
         "flutter",
         "image_picker"

@@ -1,10 +1,10 @@
 name: rj_form_engine
-description: >
-  A schema-driven form engine for Flutter. Build complex forms from pure
-  configuration — text, number, date, cascading dropdowns, image upload,
+description: >-
+  A schema-driven dynamic form engine for Flutter. Build complex, validated forms
+  from pure configuration — text, number, date, cascading dropdowns, image upload,
   slider, toggle, radio, chip multi-select, time picker, spinner, and custom fields.
-  Zero dependencies beyond image_picker. Works with any state management.
-version: 0.0.1
+  Zero dependencies beyond image_picker. Works with any state management approach.
+version: 0.2.0
 homepage: https://github.com/ReturajProshad/rj_form_engine
 repository: https://github.com/ReturajProshad/rj_form_engine
 issue_tracker: https://github.com/ReturajProshad/rj_form_engine/issues
@@ -12,9 +12,9 @@ issue_tracker: https://github.com/ReturajProshad/rj_form_engine/issues
 topics:
   - forms
   - form-builder
-  - schema-driven
+  - dynamic-forms
   - validation
-  - flutter-ui
+  - cascading-dropdowns
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
