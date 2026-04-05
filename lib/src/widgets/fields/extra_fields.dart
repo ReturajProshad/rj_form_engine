@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../../models/dropdown_item.dart';
 import '../../models/field_meta.dart';
 import '../../theme/form_theme.dart';
+import '../../utils/rj_responsive.dart';
+import '../../utils/rj_time_utils.dart';
 
 // ─── Shared label row helper ─────────────────────────────────────────────────
 
-Widget _fieldLabel(String label, bool required, RjFormTheme theme) {
+Widget _fieldLabel(String label, bool required, RjFormTheme theme, {double width = 0}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Row(
@@ -13,10 +15,10 @@ Widget _fieldLabel(String label, bool required, RjFormTheme theme) {
         Text(
           label,
           style: theme.labelStyle ??
-              const TextStyle(
-                fontSize: 13,
+              TextStyle(
+                fontSize: RjResponsive.labelFontSize(width),
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
+                color: const Color(0xFF374151),
               ),
         ),
         if (required) Text(' *', style: TextStyle(color: theme.errorColor)),
@@ -25,14 +27,13 @@ Widget _fieldLabel(String label, bool required, RjFormTheme theme) {
   );
 }
 
-Widget _errorText(String? error, RjFormTheme theme) {
+Widget _errorText(String? error, RjFormTheme theme, {double width = 0}) {
   if (error == null) return const SizedBox.shrink();
   return Padding(
     padding: const EdgeInsets.only(top: 6, left: 4),
     child: Text(
       error,
-      style:
-          theme.errorStyle ?? TextStyle(color: theme.errorColor, fontSize: 12),
+      style: theme.errorStyle ?? TextStyle(color: theme.errorColor, fontSize: RjResponsive.errorFontSize(width)),
     ),
   );
 }
@@ -45,6 +46,7 @@ class RjSliderField extends StatelessWidget {
   final String? errorText;
   final RjFormTheme theme;
   final void Function(double value) onChanged;
+  final double width;
 
   const RjSliderField({
     super.key,
@@ -53,6 +55,7 @@ class RjSliderField extends StatelessWidget {
     required this.theme,
     this.value,
     this.errorText,
+    this.width = 0,
   });
 
   @override
@@ -67,7 +70,7 @@ class RjSliderField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fieldLabel(field.label, field.required, theme),
+        _fieldLabel(field.label, field.required, theme, width: width),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
@@ -85,29 +88,32 @@ class RjSliderField extends StatelessWidget {
                 children: [
                   Text(
                     field.sliderMin.toStringAsFixed(0),
-                    style:
-                        const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    style: TextStyle(
+                      fontSize: RjResponsive.sliderLabelFontSize(width),
+                      color: const Color(0xFF9CA3AF),
+                    ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: theme.primaryColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: RjResponsive.sliderBadgeFontSize(width),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                   Text(
                     field.sliderMax.toStringAsFixed(0),
-                    style:
-                        const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    style: TextStyle(
+                      fontSize: RjResponsive.sliderLabelFontSize(width),
+                      color: const Color(0xFF9CA3AF),
+                    ),
                   ),
                 ],
               ),
@@ -115,8 +121,8 @@ class RjSliderField extends StatelessWidget {
                 data: SliderTheme.of(context).copyWith(
                   activeTrackColor: theme.primaryColor,
                   thumbColor: theme.primaryColor,
-                  inactiveTrackColor: theme.primaryColor.withOpacity(0.2),
-                  overlayColor: theme.primaryColor.withOpacity(0.1),
+                  inactiveTrackColor: theme.primaryColor.withValues(alpha: 0.2),
+                  overlayColor: theme.primaryColor.withValues(alpha: 0.1),
                   trackHeight: 4,
                 ),
                 child: Slider(
@@ -130,7 +136,7 @@ class RjSliderField extends StatelessWidget {
             ],
           ),
         ),
-        _errorText(errorText, theme),
+        _errorText(errorText, theme, width: width),
       ],
     );
   }
@@ -144,6 +150,7 @@ class RjTimePickerField extends StatelessWidget {
   final String? errorText;
   final RjFormTheme theme;
   final void Function(TimeOfDay value) onChanged;
+  final double width;
 
   const RjTimePickerField({
     super.key,
@@ -152,34 +159,16 @@ class RjTimePickerField extends StatelessWidget {
     required this.theme,
     this.value,
     this.errorText,
+    this.width = 0,
   });
 
   String _format(TimeOfDay? t) {
     if (t == null) return '';
     final format = field.timeFormat;
     if (format != null) {
-      return _applyTimeFormat(t, format);
+      return RjTimeUtils.format(t, format: format);
     }
-    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final m = t.minute.toString().padLeft(2, '0');
-    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
-    return '$h:$m $period';
-  }
-
-  String _applyTimeFormat(TimeOfDay t, String format) {
-    final hour24 = t.hour;
-    final hour12 = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final minute = t.minute.toString().padLeft(2, '0');
-    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
-
-    return format
-        .replaceAll('HH', hour24.toString().padLeft(2, '0'))
-        .replaceAll('H', hour24.toString())
-        .replaceAll('hh', hour12.toString().padLeft(2, '0'))
-        .replaceAll('h', hour12.toString())
-        .replaceAll('mm', minute)
-        .replaceAll('a', period)
-        .replaceAll('A', period);
+    return RjTimeUtils.format(t);
   }
 
   Future<void> _pick(BuildContext context) async {
@@ -203,14 +192,17 @@ class RjTimePickerField extends StatelessWidget {
       controller: TextEditingController(text: _format(value)),
       onTap: () => _pick(context),
       style: theme.inputStyle ??
-          const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+          TextStyle(
+            fontSize: RjResponsive.inputFontSize(width),
+            color: const Color(0xFF111827),
+          ),
       decoration: theme.inputDecoration(
         label: field.label,
         hint: field.hint ?? 'Select time',
         errorText: errorText,
         suffixIcon: Icon(
           Icons.access_time_rounded,
-          size: 18,
+          size: RjResponsive.suffixIconSize(width),
           color: theme.primaryColor,
         ),
       ),
@@ -226,6 +218,7 @@ class RjSpinnerField extends StatelessWidget {
   final String? errorText;
   final RjFormTheme theme;
   final void Function(int value) onChanged;
+  final double width;
 
   const RjSpinnerField({
     super.key,
@@ -234,6 +227,7 @@ class RjSpinnerField extends StatelessWidget {
     required this.theme,
     this.value,
     this.errorText,
+    this.width = 0,
   });
 
   @override
@@ -241,11 +235,14 @@ class RjSpinnerField extends StatelessWidget {
     final current = value ?? field.spinnerMin;
     final canDecrement = current > field.spinnerMin;
     final canIncrement = current < field.spinnerMax;
+    final btnSize = RjResponsive.spinnerButtonSize(width);
+    final iconSize = RjResponsive.spinnerIconSize(width);
+    final valueFontSize = RjResponsive.spinnerValueFontSize(width);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fieldLabel(field.label, field.required, theme),
+        _fieldLabel(field.label, field.required, theme, width: width),
         Container(
           decoration: BoxDecoration(
             color: theme.fieldFillColor,
@@ -266,9 +263,9 @@ class RjSpinnerField extends StatelessWidget {
                   topLeft: theme.borderRadius.topLeft,
                   bottomLeft: theme.borderRadius.bottomLeft,
                 ),
-                onTap: canDecrement
-                    ? () => onChanged(current - field.spinnerStep)
-                    : null,
+                onTap: canDecrement ? () => onChanged(current - field.spinnerStep) : null,
+                buttonSize: btnSize,
+                iconSize: iconSize,
               ),
 
               // Value display
@@ -277,10 +274,10 @@ class RjSpinnerField extends StatelessWidget {
                   child: Text(
                     '$current',
                     style: theme.inputStyle ??
-                        const TextStyle(
-                          fontSize: 18,
+                        TextStyle(
+                          fontSize: valueFontSize,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
+                          color: const Color(0xFF111827),
                         ),
                   ),
                 ),
@@ -295,14 +292,14 @@ class RjSpinnerField extends StatelessWidget {
                   topRight: theme.borderRadius.topRight,
                   bottomRight: theme.borderRadius.bottomRight,
                 ),
-                onTap: canIncrement
-                    ? () => onChanged(current + field.spinnerStep)
-                    : null,
+                onTap: canIncrement ? () => onChanged(current + field.spinnerStep) : null,
+                buttonSize: btnSize,
+                iconSize: iconSize,
               ),
             ],
           ),
         ),
-        _errorText(errorText, theme),
+        _errorText(errorText, theme, width: width),
       ],
     );
   }
@@ -314,6 +311,8 @@ class _SpinnerButton extends StatelessWidget {
   final Color primaryColor;
   final BorderRadius borderRadius;
   final VoidCallback? onTap;
+  final double buttonSize;
+  final double iconSize;
 
   const _SpinnerButton({
     required this.icon,
@@ -321,6 +320,8 @@ class _SpinnerButton extends StatelessWidget {
     required this.primaryColor,
     required this.borderRadius,
     required this.onTap,
+    this.buttonSize = 52,
+    this.iconSize = 20,
   });
 
   @override
@@ -328,18 +329,19 @@ class _SpinnerButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: borderRadius,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color:
-              enabled ? primaryColor.withOpacity(0.08) : Colors.grey.shade100,
-          borderRadius: borderRadius,
-        ),
-        child: Icon(
-          icon,
-          color: enabled ? primaryColor : Colors.grey.shade400,
-          size: 20,
+      child: SizedBox(
+        width: buttonSize,
+        height: buttonSize,
+        child: Container(
+          decoration: BoxDecoration(
+            color: enabled ? primaryColor.withValues(alpha: 0.08) : Colors.grey.shade100,
+            borderRadius: borderRadius,
+          ),
+          child: Icon(
+            icon,
+            color: enabled ? primaryColor : Colors.grey.shade400,
+            size: iconSize,
+          ),
         ),
       ),
     );
@@ -354,6 +356,7 @@ class RjToggleField extends StatelessWidget {
   final String? errorText;
   final RjFormTheme theme;
   final void Function(bool value) onChanged;
+  final double width;
 
   const RjToggleField({
     super.key,
@@ -362,11 +365,13 @@ class RjToggleField extends StatelessWidget {
     required this.theme,
     this.value,
     this.errorText,
+    this.width = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     final current = value ?? false;
+    final labelFontSize = RjResponsive.toggleLabelFontSize(width);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,23 +397,22 @@ class RjToggleField extends StatelessWidget {
                         Text(
                           field.label,
                           style: theme.labelStyle ??
-                              const TextStyle(
-                                fontSize: 14,
+                              TextStyle(
+                                fontSize: labelFontSize,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151),
+                                color: const Color(0xFF374151),
                               ),
                         ),
-                        if (field.required)
-                          Text(' *', style: TextStyle(color: theme.errorColor)),
+                        if (field.required) Text(' *', style: TextStyle(color: theme.errorColor)),
                       ],
                     ),
                     if (field.hint != null)
                       Text(
                         field.hint!,
                         style: theme.hintStyle ??
-                            const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF9CA3AF),
+                            TextStyle(
+                              fontSize: RjResponsive.errorFontSize(width),
+                              color: const Color(0xFF9CA3AF),
                             ),
                       ),
                   ],
@@ -417,12 +421,12 @@ class RjToggleField extends StatelessWidget {
               Switch(
                 value: current,
                 onChanged: onChanged,
-                activeColor: theme.primaryColor,
+                activeThumbColor: theme.primaryColor,
               ),
             ],
           ),
         ),
-        _errorText(errorText, theme),
+        _errorText(errorText, theme, width: width),
       ],
     );
   }
@@ -437,6 +441,7 @@ class RjRadioField extends StatelessWidget {
   final RjFormTheme theme;
   final List<DropdownItem> options;
   final void Function(String value) onChanged;
+  final double width;
 
   const RjRadioField({
     super.key,
@@ -446,6 +451,7 @@ class RjRadioField extends StatelessWidget {
     required this.theme,
     this.value,
     this.errorText,
+    this.width = 0,
   });
 
   @override
@@ -453,7 +459,7 @@ class RjRadioField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fieldLabel(field.label, field.required, theme),
+        _fieldLabel(field.label, field.required, theme, width: width),
         Container(
           decoration: BoxDecoration(
             color: theme.fieldFillColor,
@@ -463,35 +469,36 @@ class RjRadioField extends StatelessWidget {
               width: theme.borderWidth,
             ),
           ),
-          child: Column(
-            children: options.map((option) {
-              final selected = value == option.id;
-              return RadioListTile<String>(
-                value: option.id,
-                groupValue: value,
-                title: Text(
-                  option.label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                    color:
-                        selected ? theme.primaryColor : const Color(0xFF374151),
+          child: RadioGroup<String>(
+            groupValue: value,
+            onChanged: (String? v) {
+              if (v != null) onChanged(v);
+            },
+            child: Column(
+              children: options.map((option) {
+                final selected = value == option.id;
+                return ListTile(
+                  leading: Radio<String>(
+                    value: option.id,
+                    activeColor: theme.primaryColor,
                   ),
-                ),
-                subtitle: option.sublabel != null
-                    ? Text(option.sublabel!,
-                        style: const TextStyle(fontSize: 12))
-                    : null,
-                activeColor: theme.primaryColor,
-                dense: true,
-                onChanged: (v) {
-                  if (v != null) onChanged(v);
-                },
-              );
-            }).toList(),
+                  title: Text(
+                    option.label,
+                    style: TextStyle(
+                      fontSize: RjResponsive.radioOptionFontSize(width),
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                      color: selected ? theme.primaryColor : const Color(0xFF374151),
+                    ),
+                  ),
+                  subtitle: option.sublabel != null ? Text(option.sublabel!, style: TextStyle(fontSize: RjResponsive.errorFontSize(width))) : null,
+                  dense: true,
+                  onTap: () => onChanged(option.id),
+                );
+              }).toList(),
+            ),
           ),
         ),
-        _errorText(errorText, theme),
+        _errorText(errorText, theme, width: width),
       ],
     );
   }
@@ -506,6 +513,7 @@ class RjChipField extends StatelessWidget {
   final RjFormTheme theme;
   final List<DropdownItem> options;
   final void Function(List<String> value) onChanged;
+  final double width;
 
   const RjChipField({
     super.key,
@@ -515,6 +523,7 @@ class RjChipField extends StatelessWidget {
     required this.theme,
     this.value = const [],
     this.errorText,
+    this.width = 0,
   });
 
   @override
@@ -522,7 +531,7 @@ class RjChipField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fieldLabel(field.label, field.required, theme),
+        _fieldLabel(field.label, field.required, theme, width: width),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
@@ -535,15 +544,15 @@ class RjChipField extends StatelessWidget {
             ),
           ),
           child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: RjResponsive.chipSpacing(width),
+            runSpacing: RjResponsive.chipSpacing(width),
             children: options.map((option) {
               final selected = value.contains(option.id);
               return FilterChip(
                 label: Text(
                   option.label,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: RjResponsive.chipLabelFontSize(width),
                     fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                     color: selected ? Colors.white : const Color(0xFF374151),
                   ),
@@ -570,7 +579,7 @@ class RjChipField extends StatelessWidget {
             }).toList(),
           ),
         ),
-        _errorText(errorText, theme),
+        _errorText(errorText, theme, width: width),
       ],
     );
   }

@@ -32,6 +32,23 @@
 class RjValidators {
   RjValidators._();
 
+  // ─── Required ──────────────────────────────────────────────────────────────
+
+  /// Validates that a value is not null or empty.
+  /// Works with strings, lists, and any other type (null check).
+  static FieldValidator required({String? message}) {
+    return (value) {
+      if (value == null) return message ?? 'This field is required';
+      if (value is String && value.trim().isEmpty) {
+        return message ?? 'This field is required';
+      }
+      if (value is List && value.isEmpty) {
+        return message ?? 'This field is required';
+      }
+      return null;
+    };
+  }
+
   // ─── Text ──────────────────────────────────────────────────────────────────
 
   /// Validates a properly formatted email address.
@@ -82,7 +99,8 @@ class RjValidators {
       if (value == null || value.toString().trim().isEmpty) return null;
       final pattern = RegExp(r'^01[3-9][0-9]{8}$');
       if (!pattern.hasMatch(value.toString().trim())) {
-        return message ?? 'Enter a valid Bangladeshi mobile number (01XXXXXXXXX)';
+        return message ??
+            'Enter a valid Bangladeshi mobile number (01XXXXXXXXX)';
       }
       return null;
     };

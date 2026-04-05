@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/field_meta.dart';
 import '../../theme/form_theme.dart';
+import '../../utils/rj_responsive.dart';
 
 class RjDateField extends StatefulWidget {
   final FieldMeta field;
@@ -8,6 +9,7 @@ class RjDateField extends StatefulWidget {
   final String? errorText;
   final RjFormTheme theme;
   final void Function(DateTime value) onChanged;
+  final double width;
 
   const RjDateField({
     super.key,
@@ -16,6 +18,7 @@ class RjDateField extends StatefulWidget {
     required this.onChanged,
     required this.theme,
     this.errorText,
+    this.width = 0,
   });
 
   @override
@@ -116,7 +119,10 @@ class _RjDateFieldState extends State<RjDateField> {
         readOnly: true,
         onTap: _pickDate,
         style: widget.theme.inputStyle ??
-            const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+            TextStyle(
+              fontSize: RjResponsive.inputFontSize(widget.width),
+              color: const Color(0xFF111827),
+            ),
         decoration: widget.theme.inputDecoration(
           label: widget.field.label,
           hint: widget.field.hint ?? _hintText,
@@ -124,7 +130,7 @@ class _RjDateFieldState extends State<RjDateField> {
           isFocused: _isFocused,
           suffixIcon: Icon(
             Icons.calendar_today_outlined,
-            size: 18,
+            size: RjResponsive.suffixIconSize(widget.width),
             color: widget.theme.primaryColor,
           ),
         ),

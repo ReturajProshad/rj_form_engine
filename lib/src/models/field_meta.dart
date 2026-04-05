@@ -10,24 +10,15 @@ enum FieldType {
   image,
   textArea,
   custom,
-
-  /// A horizontal draggable slider. Returns a [double].
   slider,
-
-  /// A time picker (clock UI). Returns a [TimeOfDay].
   timePicker,
-
-  /// A number stepper with + / - buttons. Returns an [int].
   spinner,
-
-  /// A boolean on/off toggle switch. Returns a [bool].
   toggle,
-
-  /// Pick exactly one option from a list. Returns the selected [id] string.
   radio,
-
-  /// Select multiple options from a chip list. Returns [List<String>] of ids.
   chip,
+
+  /// A non-interactive section divider with a label.
+  section,
 }
 
 typedef FieldValidator = String? Function(dynamic value);
@@ -135,6 +126,23 @@ class FieldMeta {
           viewOnly: viewOnly,
           builder: builder,
         );
+
+  /// Creates a non-interactive section divider with a label.
+  ///
+  /// Renders a horizontal rule with the [label] centered between two divider lines.
+  /// The [key] is optional and is only used for identification.
+  factory FieldMeta.section({
+    String key = '',
+    required String label,
+  }) {
+    return FieldMeta(
+      key: key.isEmpty
+          ? 'section_${label.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}'
+          : key,
+      label: label,
+      type: FieldType.section,
+    );
+  }
 
   FieldMeta copyWith({
     bool? viewOnly,

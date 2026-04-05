@@ -3,6 +3,7 @@ import '../models/field_meta.dart';
 import '../models/form_result.dart';
 import '../state/form_controller.dart';
 import '../theme/form_theme.dart';
+import '../utils/rj_responsive.dart';
 import 'fields/text_fields.dart';
 import 'fields/date_field.dart';
 import 'fields/dropdown_field.dart';
@@ -22,6 +23,8 @@ class RjForm extends StatefulWidget {
   final bool showErrorsSummary;
   final bool autoDismissKeyboard;
   final String? Function(Map<String, String> errors)? errorsSummaryBuilder;
+  final void Function(FormResult result)? onSuccess;
+  final bool autoClearOnSubmit;
 
   const RjForm({
     super.key,
@@ -37,6 +40,8 @@ class RjForm extends StatefulWidget {
     this.showErrorsSummary = false,
     this.autoDismissKeyboard = true,
     this.errorsSummaryBuilder,
+    this.onSuccess,
+    this.autoClearOnSubmit = false,
   });
 
   @override
@@ -79,7 +84,14 @@ class _RjFormState extends State<RjForm> {
 
     setState(() => _isSubmitting = true);
     try {
-      await widget.onSubmit(_controller.toResult());
+      final result = _controller.toResult();
+      await widget.onSubmit(result);
+      if (mounted) {
+        widget.onSuccess?.call(result);
+        if (widget.autoClearOnSubmit) {
+          _controller.clear();
+        }
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -93,25 +105,30 @@ class _RjFormState extends State<RjForm> {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = ListenableBuilder(
-      listenable: _controller,
-      builder: (context, _) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (widget.showErrorsSummary && _controller.errors.isNotEmpty)
-              _buildErrorsSummary(),
-            ..._buildFields(),
-            if (!widget.hideSubmitButton && !widget.viewOnly) ...[
-              SizedBox(height: widget.theme.fieldSpacing),
-              _SubmitButton(
-                label: widget.submitLabel,
-                isLoading: _isSubmitting,
-                theme: widget.theme,
-                onPressed: _submit,
-              ),
-            ],
-          ],
+    Widget content = LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        return ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.showErrorsSummary && _controller.errors.isNotEmpty) _buildErrorsSummary(width),
+                ..._buildFields(width),
+                if (!widget.hideSubmitButton && !widget.viewOnly) ...[
+                  SizedBox(height: RjResponsive.fieldSpacing(width)),
+                  _SubmitButton(
+                    label: widget.submitLabel,
+                    isLoading: _isSubmitting,
+                    theme: widget.theme,
+                    onPressed: _submit,
+                    width: width,
+                  ),
+                ],
+              ],
+            );
+          },
         );
       },
     );
@@ -127,15 +144,15 @@ class _RjFormState extends State<RjForm> {
     return content;
   }
 
-  Widget _buildErrorsSummary() {
+  Widget _buildErrorsSummary(double width) {
     return Container(
-      margin: EdgeInsets.only(bottom: widget.theme.fieldSpacing),
+      margin: EdgeInsets.only(bottom: RjResponsive.fieldSpacing(width)),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: widget.theme.errorColor.withOpacity(0.08),
+        color: widget.theme.errorColor.withValues(alpha: 0.08),
         borderRadius: widget.theme.borderRadius,
         border: Border.all(
-          color: widget.theme.errorColor.withOpacity(0.3),
+          color: widget.theme.errorColor.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -164,11 +181,10 @@ class _RjFormState extends State<RjForm> {
             (e) => Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                widget.errorsSummaryBuilder?.call(_controller.errors) ??
-                    '• ${e.key}: ${e.value}',
+                widget.errorsSummaryBuilder?.call(_controller.errors) ?? '• ${e.key}: ${e.value}',
                 style: TextStyle(
                   color: widget.theme.errorColor,
-                  fontSize: 12,
+                  fontSize: RjResponsive.errorFontSize(width),
                 ),
               ),
             ),
@@ -178,19 +194,58 @@ class _RjFormState extends State<RjForm> {
     );
   }
 
-  List<Widget> _buildFields() {
+  List<Widget> _buildFields(double width) {
     final widgets = <Widget>[];
 
     for (final field in widget.fields) {
-      if (field.dependency != null &&
-          !field.dependency!.isVisible(_controller.values)) {
+      if (field.type == FieldType.section) {
+        widgets.add(
+          Padding(
+            padding: EdgeInsets.only(
+              top: RjResponsive.fieldSpacing(width) * 1.5,
+              bottom: RjResponsive.fieldSpacing(width) * 0.5,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Divider(
+                    color: widget.theme.borderColor,
+                    thickness: 1,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    field.label,
+                    style: widget.theme.labelStyle ??
+                        TextStyle(
+                          fontSize: RjResponsive.labelFontSize(width) + 2,
+                          fontWeight: FontWeight.w700,
+                          color: widget.theme.primaryColor,
+                          letterSpacing: 0.5,
+                        ),
+                  ),
+                ),
+                Expanded(
+                  child: Divider(
+                    color: widget.theme.borderColor,
+                    thickness: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
         continue;
       }
 
-      final effectiveField =
-          widget.viewOnly ? field.copyWith(viewOnly: true) : field;
+      if (field.dependency != null && !field.dependency!.isVisible(_controller.values)) {
+        continue;
+      }
 
-      final fieldWidget = _buildField(effectiveField);
+      final effectiveField = widget.viewOnly ? field.copyWith(viewOnly: true) : field;
+
+      final fieldWidget = _buildField(effectiveField, width);
 
       widgets.add(
         AbsorbPointer(
@@ -198,7 +253,7 @@ class _RjFormState extends State<RjForm> {
           child: Opacity(
             opacity: effectiveField.viewOnly ? 0.6 : 1.0,
             child: Padding(
-              padding: EdgeInsets.only(bottom: widget.theme.fieldSpacing),
+              padding: EdgeInsets.only(bottom: RjResponsive.fieldSpacing(width)),
               child: fieldWidget,
             ),
           ),
@@ -209,7 +264,7 @@ class _RjFormState extends State<RjForm> {
     return widgets;
   }
 
-  Widget _buildField(FieldMeta field) {
+  Widget _buildField(FieldMeta field, double width) {
     final error = _controller.errors[field.key];
     final value = _controller.values[field.key];
 
@@ -221,6 +276,7 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.textArea:
@@ -231,6 +287,7 @@ class _RjFormState extends State<RjForm> {
           theme: widget.theme,
           maxLines: 4,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.number:
@@ -240,6 +297,7 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.date:
@@ -249,12 +307,11 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.dropdown:
-        final parentValue = field.dependsOn != null
-            ? _controller.values[field.dependsOn]
-            : null;
+        final parentValue = field.dependsOn != null ? _controller.values[field.dependsOn] : null;
 
         return RjDropdownField(
           field: field,
@@ -267,11 +324,11 @@ class _RjFormState extends State<RjForm> {
             _controller.clearError(field.key);
             widget.onChanged?.call(field.key, v);
           },
+          width: width,
         );
 
       case FieldType.image:
-        final paths =
-            value is List ? value.whereType<String>().toList() : <String>[];
+        final paths = value is List ? value.whereType<String>().toList() : <String>[];
 
         return RjImageField(
           field: field,
@@ -280,6 +337,7 @@ class _RjFormState extends State<RjForm> {
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
           onValidationError: (msg) => _controller.setError(field.key, msg),
+          width: width,
         );
 
       case FieldType.custom:
@@ -299,12 +357,11 @@ class _RjFormState extends State<RjForm> {
       case FieldType.slider:
         return RjSliderField(
           field: field,
-          value: value is double
-              ? value
-              : (value is num ? value.toDouble() : null),
+          value: value is double ? value : (value is num ? value.toDouble() : null),
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.timePicker:
@@ -314,6 +371,7 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.spinner:
@@ -323,6 +381,7 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.toggle:
@@ -332,6 +391,7 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.radio:
@@ -342,11 +402,11 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
 
       case FieldType.chip:
-        final selected =
-            value is List ? value.whereType<String>().toList() : <String>[];
+        final selected = value is List ? value.whereType<String>().toList() : <String>[];
         return RjChipField(
           field: field,
           options: field.options,
@@ -354,7 +414,11 @@ class _RjFormState extends State<RjForm> {
           errorText: error,
           theme: widget.theme,
           onChanged: (v) => _setValue(field.key, v),
+          width: width,
         );
+
+      case FieldType.section:
+        return const SizedBox.shrink();
     }
   }
 }
@@ -364,12 +428,14 @@ class _SubmitButton extends StatelessWidget {
   final bool isLoading;
   final RjFormTheme theme;
   final VoidCallback onPressed;
+  final double width;
 
   const _SubmitButton({
     required this.label,
     required this.isLoading,
     required this.theme,
     required this.onPressed,
+    this.width = 0,
   });
 
   @override
@@ -381,7 +447,7 @@ class _SubmitButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.submitButtonColor ?? theme.primaryColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: RjResponsive.submitButtonPadding(width),
           shape: RoundedRectangleBorder(
             borderRadius: theme.borderRadius,
           ),
@@ -399,8 +465,8 @@ class _SubmitButton extends StatelessWidget {
             : Text(
                 label,
                 style: theme.submitButtonTextStyle ??
-                    const TextStyle(
-                      fontSize: 15,
+                    TextStyle(
+                      fontSize: RjResponsive.submitButtonFontSize(width),
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
                     ),

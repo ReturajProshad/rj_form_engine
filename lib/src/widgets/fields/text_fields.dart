@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/field_meta.dart';
 import '../../theme/form_theme.dart';
+import '../../utils/rj_responsive.dart';
 
 class _NumberInputFormatter extends TextInputFormatter {
   @override
@@ -52,6 +53,7 @@ class RjTextField extends StatefulWidget {
   final bool readOnly;
   final TextEditingController? controller;
   final int maxLines;
+  final double width;
 
   const RjTextField({
     super.key,
@@ -64,6 +66,7 @@ class RjTextField extends StatefulWidget {
     this.readOnly = false,
     this.controller,
     this.maxLines = 1,
+    this.width = 0,
   });
 
   @override
@@ -123,22 +126,19 @@ class _RjTextFieldState extends State<RjTextField> {
         focusNode: _focusNode,
         readOnly: widget.readOnly,
         onTap: widget.onTap,
-        maxLines:
-            widget.field.type == FieldType.textArea ? widget.field.maxLines : 1,
+        maxLines: widget.field.type == FieldType.textArea ? widget.field.maxLines : 1,
         style: widget.theme.inputStyle ??
-            const TextStyle(fontSize: 14, color: Color(0xFF111827)),
-        keyboardType: widget.field.type == FieldType.textArea
-            ? TextInputType.multiline
-            : TextInputType.text,
+            TextStyle(
+              fontSize: RjResponsive.inputFontSize(widget.width),
+              color: const Color(0xFF111827),
+            ),
+        keyboardType: widget.field.type == FieldType.textArea ? TextInputType.multiline : TextInputType.text,
         decoration: widget.theme.inputDecoration(
           label: widget.field.label,
           hint: widget.field.hint,
           errorText: widget.errorText,
           isFocused: _isFocused,
-          suffixIcon: widget.readOnly
-              ? const Icon(Icons.lock_outline,
-                  size: 16, color: Color(0xFF9CA3AF))
-              : null,
+          suffixIcon: widget.readOnly ? Icon(Icons.lock_outline, size: RjResponsive.suffixIconSize(widget.width), color: const Color(0xFF9CA3AF)) : null,
         ),
         onChanged: widget.onChanged,
       ),
@@ -152,6 +152,7 @@ class RjNumberField extends StatefulWidget {
   final String? errorText;
   final RjFormTheme theme;
   final void Function(num? value) onChanged;
+  final double width;
 
   const RjNumberField({
     super.key,
@@ -160,6 +161,7 @@ class RjNumberField extends StatefulWidget {
     required this.onChanged,
     required this.theme,
     this.errorText,
+    this.width = 0,
   });
 
   @override
@@ -212,7 +214,10 @@ class _RjNumberFieldState extends State<RjNumberField> {
           _NumberInputFormatter(),
         ],
         style: widget.theme.inputStyle ??
-            const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+            TextStyle(
+              fontSize: RjResponsive.inputFontSize(widget.width),
+              color: const Color(0xFF111827),
+            ),
         decoration: widget.theme.inputDecoration(
           label: widget.field.label,
           hint: widget.field.hint,

@@ -4,15 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rj_form_engine/rj_form_engine.dart';
 
 // Helpers
-Widget _wrap(Widget child) =>
-    MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
+Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
 
-final _textField = FieldMeta(
-    key: 'name', label: 'Full Name', type: FieldType.text, required: true);
-final _numberField =
-    FieldMeta(key: 'age', label: 'Age', type: FieldType.number);
-final _textAreaField =
-    FieldMeta(key: 'bio', label: 'Bio', type: FieldType.textArea);
+final _textField = FieldMeta(key: 'name', label: 'Full Name', type: FieldType.text, required: true);
+final _numberField = FieldMeta(key: 'age', label: 'Age', type: FieldType.number);
+final _textAreaField = FieldMeta(key: 'bio', label: 'Bio', type: FieldType.textArea);
 final _staticDropdown = FieldMeta(
   key: 'status',
   label: 'Status',
@@ -52,8 +48,7 @@ void main() {
       expect(find.text('Save Profile'), findsOneWidget);
     });
 
-    testWidgets('hides submit button when hideSubmitButton is true',
-        (tester) async {
+    testWidgets('hides submit button when hideSubmitButton is true', (tester) async {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField],
@@ -66,8 +61,7 @@ void main() {
       expect(find.text('Submit'), findsNothing);
     });
 
-    testWidgets('shows validation error when required field is empty',
-        (tester) async {
+    testWidgets('shows validation error when required field is empty', (tester) async {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField],
@@ -82,8 +76,7 @@ void main() {
       expect(find.text('Full Name is required'), findsOneWidget);
     });
 
-    testWidgets('does not show error when required field has value',
-        (tester) async {
+    testWidgets('does not show error when required field has value', (tester) async {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField],
@@ -124,14 +117,13 @@ void main() {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField],
-          initialValues: {'name': 'Prefilled'},
+          initialValues: const {'name': 'Prefilled'},
           onSubmit: (_) async {},
         ),
       ));
       await tester.pumpAndSettle();
 
-      final field =
-          tester.widget<TextFormField>(find.byType(TextFormField).first);
+      final field = tester.widget<TextFormField>(find.byType(TextFormField).first);
       expect(field.controller?.text, 'Prefilled');
     });
 
@@ -201,12 +193,11 @@ void main() {
       expect(find.text('Other Detail'), findsOneWidget);
     });
 
-    testWidgets('viewOnly mode renders all fields as non-interactive',
-        (tester) async {
+    testWidgets('viewOnly mode renders all fields as non-interactive', (tester) async {
       await tester.pumpWidget(_wrap(
         RjForm(
           fields: [_textField, _numberField],
-          initialValues: {'name': 'John', 'age': 25},
+          initialValues: const {'name': 'John', 'age': 25},
           viewOnly: true,
           onSubmit: (_) async {},
         ),
@@ -217,8 +208,7 @@ void main() {
       expect(find.text('Submit'), findsNothing);
     });
 
-    testWidgets('external controller receives submitted values',
-        (tester) async {
+    testWidgets('external controller receives submitted values', (tester) async {
       final ctrl = FormController();
       addTearDown(ctrl.dispose);
 
@@ -264,9 +254,7 @@ void main() {
           key: 'email',
           label: 'Email',
           type: FieldType.text,
-          validators: [
-            (v) => (v is String && !v.contains('@')) ? 'Invalid email' : null
-          ],
+          validators: [(v) => (v is String && !v.contains('@')) ? 'Invalid email' : null],
         ),
       ];
 
@@ -306,10 +294,8 @@ void main() {
 
     testWidgets('showErrorsSummary displays error summary', (tester) async {
       final fields = [
-        FieldMeta(
-            key: 'name', label: 'Name', type: FieldType.text, required: true),
-        FieldMeta(
-            key: 'email', label: 'Email', type: FieldType.text, required: true),
+        FieldMeta(key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta(key: 'email', label: 'Email', type: FieldType.text, required: true),
       ];
 
       await tester.pumpWidget(_wrap(

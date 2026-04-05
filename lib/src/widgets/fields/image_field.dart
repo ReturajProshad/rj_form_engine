@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/field_meta.dart';
 import '../../theme/form_theme.dart';
+import '../../utils/rj_responsive.dart';
 
 class RjImageField extends StatefulWidget {
   final FieldMeta field;
@@ -11,6 +12,7 @@ class RjImageField extends StatefulWidget {
   final RjFormTheme theme;
   final void Function(List<String> paths) onChanged;
   final void Function(String error)? onValidationError;
+  final double width;
 
   const RjImageField({
     super.key,
@@ -20,6 +22,7 @@ class RjImageField extends StatefulWidget {
     required this.theme,
     this.errorText,
     this.onValidationError,
+    this.width = 0,
   });
 
   @override
@@ -48,8 +51,7 @@ class _RjImageFieldState extends State<RjImageField> {
     final size = await file.length();
 
     if (size > widget.field.maxImageSizeBytes) {
-      final maxMb =
-          (widget.field.maxImageSizeBytes / (1024 * 1024)).toStringAsFixed(1);
+      final maxMb = (widget.field.maxImageSizeBytes / (1024 * 1024)).toStringAsFixed(1);
       _showError('Image must be smaller than ${maxMb}MB.');
       return;
     }
@@ -60,8 +62,7 @@ class _RjImageFieldState extends State<RjImageField> {
   void _showError(String message) {
     widget.onValidationError?.call(message);
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _remove(int index) {
@@ -73,6 +74,11 @@ class _RjImageFieldState extends State<RjImageField> {
   Widget build(BuildContext context) {
     final theme = widget.theme;
     final hasError = widget.errorText != null;
+    final tileSize = RjResponsive.imageTileSize(widget.width);
+    final gridSpacing = RjResponsive.imageGridSpacing(widget.width);
+    final addTileLabelFontSize = RjResponsive.addTileLabelFontSize(widget.width);
+    final addTileIconSize = RjResponsive.addTileIconSize(widget.width);
+    final removeIconSz = RjResponsive.removeIconSize(widget.width);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,10 +89,10 @@ class _RjImageFieldState extends State<RjImageField> {
             Text(
               widget.field.label,
               style: theme.labelStyle ??
-                  const TextStyle(
-                    fontSize: 13,
+                  TextStyle(
+                    fontSize: RjResponsive.labelFontSize(widget.width),
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF374151),
+                    color: const Color(0xFF374151),
                   ),
             ),
             if (widget.field.required)
@@ -111,8 +117,8 @@ class _RjImageFieldState extends State<RjImageField> {
             ),
           ),
           child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            spacing: gridSpacing,
+            runSpacing: gridSpacing,
             children: [
               // Existing images
               ...widget.value.asMap().entries.map(
@@ -120,6 +126,8 @@ class _RjImageFieldState extends State<RjImageField> {
                       path: e.value,
                       onRemove: () => _remove(e.key),
                       borderRadius: theme.borderRadius,
+                      tileSize: tileSize,
+                      removeIconSize: removeIconSz,
                     ),
                   ),
 
@@ -130,9 +138,10 @@ class _RjImageFieldState extends State<RjImageField> {
                   primaryColor: theme.primaryColor,
                   borderColor: theme.borderColor,
                   borderRadius: theme.borderRadius,
-                  label: widget.value.isEmpty
-                      ? 'Add ${widget.field.label}'
-                      : 'Add more',
+                  tileSize: tileSize,
+                  label: widget.value.isEmpty ? 'Add ${widget.field.label}' : 'Add more',
+                  labelFontSize: addTileLabelFontSize,
+                  iconSize: addTileIconSize,
                 ),
             ],
           ),
@@ -145,7 +154,10 @@ class _RjImageFieldState extends State<RjImageField> {
             child: Text(
               widget.errorText!,
               style: theme.errorStyle ??
-                  TextStyle(color: theme.errorColor, fontSize: 12),
+                  TextStyle(
+                    color: theme.errorColor,
+                    fontSize: RjResponsive.errorFontSize(widget.width),
+                  ),
             ),
           ),
       ],
@@ -159,6 +171,9 @@ class _AddTile extends StatelessWidget {
   final Color borderColor;
   final BorderRadius borderRadius;
   final String label;
+  final double tileSize;
+  final double labelFontSize;
+  final double iconSize;
 
   const _AddTile({
     required this.onTap,
@@ -166,6 +181,9 @@ class _AddTile extends StatelessWidget {
     required this.borderColor,
     required this.borderRadius,
     required this.label,
+    this.tileSize = 90,
+    this.labelFontSize = 10,
+    this.iconSize = 28,
   });
 
   @override
@@ -173,33 +191,34 @@ class _AddTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: borderRadius,
-      child: Container(
-        width: 90,
-        height: 90,
-        decoration: BoxDecoration(
-          color: primaryColor.withOpacity(0.05),
-          borderRadius: borderRadius,
-          border: Border.all(
-            color: primaryColor.withOpacity(0.3),
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_photo_alternate_outlined,
-                color: primaryColor, size: 28),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: primaryColor,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
+      child: SizedBox(
+        width: tileSize,
+        height: tileSize,
+        child: Container(
+          decoration: BoxDecoration(
+            color: primaryColor.withValues(alpha: 0.05),
+            borderRadius: borderRadius,
+            border: Border.all(
+              color: primaryColor.withValues(alpha: 0.3),
+              style: BorderStyle.solid,
             ),
-          ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add_photo_alternate_outlined, color: primaryColor, size: iconSize),
+              SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: labelFontSize,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -210,26 +229,30 @@ class _ImageTile extends StatelessWidget {
   final String path;
   final VoidCallback onRemove;
   final BorderRadius borderRadius;
+  final double tileSize;
+  final double removeIconSize;
 
   const _ImageTile({
     required this.path,
     required this.onRemove,
     required this.borderRadius,
+    this.tileSize = 90,
+    this.removeIconSize = 14,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 90,
-      height: 90,
+      width: tileSize,
+      height: tileSize,
       child: Stack(
         children: [
           ClipRRect(
             borderRadius: borderRadius,
             child: Image.file(
               File(path),
-              width: 90,
-              height: 90,
+              width: tileSize,
+              height: tileSize,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
                 color: Colors.grey.shade200,
@@ -248,7 +271,7 @@ class _ImageTile extends StatelessWidget {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 14),
+                child: Icon(Icons.close, color: Colors.white, size: removeIconSize),
               ),
             ),
           ),

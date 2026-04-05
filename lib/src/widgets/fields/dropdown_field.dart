@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/dropdown_item.dart';
 import '../../models/field_meta.dart';
 import '../../theme/form_theme.dart';
+import '../../utils/rj_responsive.dart';
 
 class RjDropdownField extends StatefulWidget {
   final FieldMeta field;
@@ -10,6 +11,7 @@ class RjDropdownField extends StatefulWidget {
   final String? errorText;
   final RjFormTheme theme;
   final void Function(String? value) onChanged;
+  final double width;
 
   const RjDropdownField({
     super.key,
@@ -19,6 +21,7 @@ class RjDropdownField extends StatefulWidget {
     this.value,
     this.parentValue,
     this.errorText,
+    this.width = 0,
   });
 
   @override
@@ -57,8 +60,7 @@ class _RjDropdownFieldState extends State<RjDropdownField> {
     });
 
     try {
-      final items =
-          await widget.field.dropdownSource!.resolve(widget.parentValue);
+      final items = await widget.field.dropdownSource!.resolve(widget.parentValue);
       if (mounted) {
         setState(() {
           _items = items;
@@ -111,7 +113,7 @@ class _RjDropdownFieldState extends State<RjDropdownField> {
     if (widget.field.dependsOn != null && widget.parentValue == null) {
       // ignore: deprecated_member_use
       return DropdownButtonFormField<String>(
-        value: null,
+        initialValue: null,
         items: const [],
         onChanged: null,
         decoration: widget.theme.inputDecoration(
@@ -135,7 +137,10 @@ class _RjDropdownFieldState extends State<RjDropdownField> {
           errorText: widget.errorText,
         ),
         style: widget.theme.inputStyle ??
-            const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+            TextStyle(
+              fontSize: RjResponsive.inputFontSize(widget.width),
+              color: const Color(0xFF111827),
+            ),
         items: _items
             .map(
               (item) => DropdownMenuItem<String>(
