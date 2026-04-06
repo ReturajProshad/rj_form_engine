@@ -494,7 +494,7 @@ class _SubmittingListenerState extends State<_SubmittingListener> {
 
 class RjForm extends StatefulWidget {
   final List<FieldMeta> fields;
-  final Future<void> Function(FormResult result) onSubmit;
+  final Future<void> Function(FormResult result)? onSubmit;
   final Map<String, dynamic>? initialValues;
   final FormController? controller;
   final RjFormTheme theme;
@@ -511,7 +511,7 @@ class RjForm extends StatefulWidget {
   const RjForm({
     super.key,
     required this.fields,
-    required this.onSubmit,
+    this.onSubmit,
     this.initialValues,
     this.controller,
     this.theme = const RjFormTheme(),
@@ -567,6 +567,7 @@ class _RjFormState extends State<RjForm> {
   }
 
   Future<void> _submit() async {
+    if (widget.onSubmit == null) return;
     final isValid = _controller.validate(widget.fields);
     if (!isValid) {
       if (widget.autoDismissKeyboard) FocusScope.of(context).unfocus();
@@ -575,7 +576,7 @@ class _RjFormState extends State<RjForm> {
     _isSubmitting.value = true;
     try {
       final result = _controller.toResult();
-      await widget.onSubmit(result);
+      await widget.onSubmit!(result);
       if (mounted) {
         widget.onSuccess?.call(result);
         if (widget.autoClearOnSubmit) _controller.clear();
@@ -606,7 +607,9 @@ class _RjFormState extends State<RjForm> {
                   errorsSummaryBuilder: widget.errorsSummaryBuilder,
                 ),
               ..._buildFieldList(width),
-              if (!widget.hideSubmitButton && !widget.viewOnly) ...[
+              if (!widget.hideSubmitButton &&
+                  !widget.viewOnly &&
+                  widget.onSubmit != null) ...[
                 SizedBox(height: RjResponsive.fieldSpacing(width)),
                 _SubmittingListener(
                   isSubmitting: _isSubmitting,
