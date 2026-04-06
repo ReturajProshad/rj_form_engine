@@ -61,12 +61,23 @@ RjForm(
 
 ---
 
-## Preview
 
-<!-- TODO: Add a GIF or screenshot preview here.
-     Recommended size: 480x800, under 2MB.
-     Example: ![rj_form_engine preview](https://raw.githubusercontent.com/ReturajProshad/rj_form_engine/main/preview.gif)
--->
+## 📸 Preview
+
+### Video Demo
+See the engine in action, including dynamic validation, cascading logic, and smooth field transitions:
+
+https://github.com/user-attachments/assets/420abb19-a3e8-4ae9-b4c7-3b6e0881237c
+
+### Screenshots
+
+| Default Fields | Automatic Error Handling | Dark/Custom Theme |
+|:---:|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/3cebb8a9-8e70-49f0-a8bb-c4df34855e14" width="250"> | <img src="https://github.com/user-attachments/assets/189e073e-af23-48a3-a379-57e9a80d1ccd" width="250"> | <img src="https://github.com/user-attachments/assets/d31624e9-01c0-4ec3-8ac0-49d0a229f68d" width="250"> |
+
+| Custom Fields Support | Form Entry Page |
+|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/b0f4f59e-860b-4a81-9180-bdc941f2f5f4" width="250"> | <img src="https://github.com/user-attachments/assets/9fc8ac3b-8acc-4029-a5f7-07fd6d42ed84" width="250"> |
 
 ---
 
@@ -76,7 +87,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rj_form_engine: ^0.1.0
+  rj_form_engine: ^0.2.0
 ```
 
 Then run:
