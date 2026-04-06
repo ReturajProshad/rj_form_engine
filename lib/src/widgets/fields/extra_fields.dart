@@ -7,7 +7,8 @@ import '../../utils/rj_time_utils.dart';
 
 // ─── Shared label row helper ─────────────────────────────────────────────────
 
-Widget _fieldLabel(String label, bool required, RjFormTheme theme, {double width = 0}) {
+Widget _fieldLabel(String label, bool required, RjFormTheme theme,
+    {double width = 0}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Row(
@@ -33,7 +34,10 @@ Widget _errorText(String? error, RjFormTheme theme, {double width = 0}) {
     padding: const EdgeInsets.only(top: 6, left: 4),
     child: Text(
       error,
-      style: theme.errorStyle ?? TextStyle(color: theme.errorColor, fontSize: RjResponsive.errorFontSize(width)),
+      style: theme.errorStyle ??
+          TextStyle(
+              color: theme.errorColor,
+              fontSize: RjResponsive.errorFontSize(width)),
     ),
   );
 }
@@ -94,7 +98,8 @@ class RjSliderField extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: theme.primaryColor,
                       borderRadius: BorderRadius.circular(20),
@@ -305,7 +310,9 @@ class RjSpinnerField extends StatelessWidget {
                   topLeft: theme.borderRadius.topLeft,
                   bottomLeft: theme.borderRadius.bottomLeft,
                 ),
-                onTap: canDecrement ? () => onChanged(current - field.spinnerStep) : null,
+                onTap: canDecrement
+                    ? () => onChanged(current - field.spinnerStep)
+                    : null,
                 buttonSize: btnSize,
                 iconSize: iconSize,
               ),
@@ -334,7 +341,9 @@ class RjSpinnerField extends StatelessWidget {
                   topRight: theme.borderRadius.topRight,
                   bottomRight: theme.borderRadius.bottomRight,
                 ),
-                onTap: canIncrement ? () => onChanged(current + field.spinnerStep) : null,
+                onTap: canIncrement
+                    ? () => onChanged(current + field.spinnerStep)
+                    : null,
                 buttonSize: btnSize,
                 iconSize: iconSize,
               ),
@@ -376,7 +385,9 @@ class _SpinnerButton extends StatelessWidget {
         height: buttonSize,
         child: Container(
           decoration: BoxDecoration(
-            color: enabled ? primaryColor.withValues(alpha: 0.08) : Colors.grey.shade100,
+            color: enabled
+                ? primaryColor.withValues(alpha: 0.08)
+                : Colors.grey.shade100,
             borderRadius: borderRadius,
           ),
           child: Icon(
@@ -445,7 +456,8 @@ class RjToggleField extends StatelessWidget {
                                 color: const Color(0xFF374151),
                               ),
                         ),
-                        if (field.required) Text(' *', style: TextStyle(color: theme.errorColor)),
+                        if (field.required)
+                          Text(' *', style: TextStyle(color: theme.errorColor)),
                       ],
                     ),
                     if (field.hint != null)
@@ -463,7 +475,12 @@ class RjToggleField extends StatelessWidget {
               Switch(
                 value: current,
                 onChanged: onChanged,
-                activeThumbColor: theme.primaryColor,
+                thumbColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return theme.primaryColor;
+                  }
+                  return null;
+                }),
               ),
             ],
           ),
@@ -528,11 +545,18 @@ class RjRadioField extends StatelessWidget {
                     option.label,
                     style: TextStyle(
                       fontSize: RjResponsive.radioOptionFontSize(width),
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                      color: selected ? theme.primaryColor : const Color(0xFF374151),
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
+                      color: selected
+                          ? theme.primaryColor
+                          : const Color(0xFF374151),
                     ),
                   ),
-                  subtitle: option.sublabel != null ? Text(option.sublabel!, style: TextStyle(fontSize: RjResponsive.errorFontSize(width))) : null,
+                  subtitle: option.sublabel != null
+                      ? Text(option.sublabel!,
+                          style: TextStyle(
+                              fontSize: RjResponsive.errorFontSize(width)))
+                      : null,
                   dense: true,
                   onTap: () => onChanged(option.id),
                 );

@@ -20,7 +20,7 @@ export 'src/utils/rj_responsive.dart';
 export 'src/utils/rj_time_utils.dart';
 
 // Validation utilities
-export 'src/validation/validators.dart' hide FieldValidator;
+export 'src/validation/validators.dart';
 
 // Widgets
 export 'src/widgets/rj_form.dart';

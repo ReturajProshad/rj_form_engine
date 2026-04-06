@@ -1,3 +1,5 @@
+import '../models/field_meta.dart';
+
 /// A collection of ready-made validators for common form field rules.
 ///
 /// Every method returns a [FieldValidator] — a function you pass
@@ -362,6 +364,3 @@ class RjValidators {
   /// ```
   static FieldValidator custom(String? Function(dynamic value) fn) => fn;
 }
-
-/// Typedef re-exported for convenience.
-typedef FieldValidator = String? Function(dynamic value);

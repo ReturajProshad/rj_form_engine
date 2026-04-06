@@ -54,7 +54,8 @@ class _FieldBuilder extends StatefulWidget {
   final FieldMeta field;
   final double width;
   final void Function(String key, dynamic value) setValue;
-  final void Function(String key, dynamic value, List<FieldMeta> fields) setValueCascade;
+  final void Function(String key, dynamic value, List<FieldMeta> fields)
+      setValueCascade;
   final void Function(String key, String message) setError;
 
   const _FieldBuilder({
@@ -71,16 +72,10 @@ class _FieldBuilder extends StatefulWidget {
 }
 
 class _FieldBuilderState extends State<_FieldBuilder> {
-  late FormController _controller;
+  FormController? _controller;
   dynamic _lastValue;
   String? _lastError;
   dynamic _lastParentValue;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = FormController();
-  }
 
   @override
   void didChangeDependencies() {
@@ -88,10 +83,10 @@ class _FieldBuilderState extends State<_FieldBuilder> {
     final scope = _FormScope.of(context);
     final newController = scope.controller;
 
-    if (!identical(_controller, newController)) {
-      _controller.removeListener(_onControllerChanged);
+    if (_controller == null || !identical(_controller, newController)) {
+      _controller?.removeListener(_onControllerChanged);
       _controller = newController;
-      _controller.addListener(_onControllerChanged);
+      _controller!.addListener(_onControllerChanged);
       _syncState();
     }
   }
@@ -106,20 +101,24 @@ class _FieldBuilderState extends State<_FieldBuilder> {
 
   @override
   void dispose() {
-    _controller.removeListener(_onControllerChanged);
+    _controller?.removeListener(_onControllerChanged);
     super.dispose();
   }
 
   void _syncState() {
-    _lastValue = _controller.values[widget.field.key];
-    _lastError = _controller.errors[widget.field.key];
-    _lastParentValue = widget.field.dependency != null ? _controller.values[widget.field.dependency!.dependsOn] : null;
+    _lastValue = _controller?.values[widget.field.key];
+    _lastError = _controller?.errors[widget.field.key];
+    _lastParentValue = widget.field.dependency != null
+        ? _controller?.values[widget.field.dependency!.dependsOn]
+        : null;
   }
 
   void _onControllerChanged() {
-    final currentValue = _controller.values[widget.field.key];
-    final currentError = _controller.errors[widget.field.key];
-    final currentParentValue = widget.field.dependency != null ? _controller.values[widget.field.dependency!.dependsOn] : null;
+    final currentValue = _controller?.values[widget.field.key];
+    final currentError = _controller?.errors[widget.field.key];
+    final currentParentValue = widget.field.dependency != null
+        ? _controller?.values[widget.field.dependency!.dependsOn]
+        : null;
 
     final valueChanged = currentValue != _lastValue;
     final errorChanged = currentError != _lastError;
@@ -139,18 +138,21 @@ class _FieldBuilderState extends State<_FieldBuilder> {
     final scope = _FormScope.of(context);
     final field = widget.field;
 
-    if (field.dependency != null && !field.dependency!.isVisible(_controller.values)) {
+    if (field.dependency != null &&
+        !field.dependency!.isVisible(_controller?.values ?? {})) {
       return const SizedBox.shrink();
     }
 
-    final effectiveField = scope.viewOnly ? field.copyWith(viewOnly: true) : field;
+    final effectiveField =
+        scope.viewOnly ? field.copyWith(viewOnly: true) : field;
 
     return AbsorbPointer(
       absorbing: effectiveField.viewOnly,
       child: Opacity(
         opacity: effectiveField.viewOnly ? 0.6 : 1.0,
         child: Padding(
-          padding: EdgeInsets.only(bottom: RjResponsive.fieldSpacing(widget.width)),
+          padding:
+              EdgeInsets.only(bottom: RjResponsive.fieldSpacing(widget.width)),
           child: _buildFieldWidget(effectiveField, scope),
         ),
       ),
@@ -217,7 +219,8 @@ class _FieldBuilderState extends State<_FieldBuilder> {
         );
 
       case FieldType.image:
-        final paths = value is List ? value.whereType<String>().toList() : <String>[];
+        final paths =
+            value is List ? value.whereType<String>().toList() : <String>[];
         return RjImageField(
           field: field,
           value: paths,
@@ -246,7 +249,9 @@ class _FieldBuilderState extends State<_FieldBuilder> {
       case FieldType.slider:
         return RjSliderField(
           field: field,
-          value: value is double ? value : (value is num ? value.toDouble() : null),
+          value: value is double
+              ? value
+              : (value is num ? value.toDouble() : null),
           errorText: error,
           theme: theme,
           onChanged: (v) => widget.setValue(field.key, v),
@@ -295,7 +300,8 @@ class _FieldBuilderState extends State<_FieldBuilder> {
         );
 
       case FieldType.chip:
-        final selected = value is List ? value.whereType<String>().toList() : <String>[];
+        final selected =
+            value is List ? value.whereType<String>().toList() : <String>[];
         return RjChipField(
           field: field,
           options: field.options,
@@ -332,37 +338,33 @@ class _ErrorSummaryListener extends StatefulWidget {
 }
 
 class _ErrorSummaryListenerState extends State<_ErrorSummaryListener> {
-  late FormController _controller;
+  FormController? _controller;
   Map<String, String> _lastErrors = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = FormController();
-  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final newController = _FormScope.of(context).controller;
-    if (!identical(_controller, newController)) {
-      _controller.removeListener(_onChanged);
+    if (_controller == null || !identical(_controller, newController)) {
+      _controller?.removeListener(_onChanged);
       _controller = newController;
-      _controller.addListener(_onChanged);
-      _lastErrors = Map.from(_controller.errors);
+      _controller!.addListener(_onChanged);
+      _lastErrors = Map.from(_controller!.errors);
     }
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onChanged);
+    _controller?.removeListener(_onChanged);
     super.dispose();
   }
 
   void _onChanged() {
-    if (_controller.errors.length != _lastErrors.length || _controller.errors.entries.any((e) => _lastErrors[e.key] != e.value)) {
+    final errors = _controller?.errors ?? {};
+    if (errors.length != _lastErrors.length ||
+        errors.entries.any((e) => _lastErrors[e.key] != e.value)) {
       setState(() {
-        _lastErrors = Map.from(_controller.errors);
+        _lastErrors = Map.from(errors);
       });
     }
   }
@@ -660,7 +662,8 @@ class _RjFormState extends State<RjForm> {
       ),
       child: Row(
         children: [
-          Expanded(child: Divider(color: widget.theme.borderColor, thickness: 1)),
+          Expanded(
+              child: Divider(color: widget.theme.borderColor, thickness: 1)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
@@ -674,7 +677,8 @@ class _RjFormState extends State<RjForm> {
                   ),
             ),
           ),
-          Expanded(child: Divider(color: widget.theme.borderColor, thickness: 1)),
+          Expanded(
+              child: Divider(color: widget.theme.borderColor, thickness: 1)),
         ],
       ),
     );
