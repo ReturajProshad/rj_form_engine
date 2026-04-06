@@ -51,7 +51,7 @@ RjForm(
 - **External controller** — read form state from outside the widget
 - **`onChanged` callback** — react to individual field changes in real time
 - **Error summary** — display all validation errors at the top of the form
-- **Keyboard dismissal** — tap outside fields to dismiss the keyboard
+- **Keyboard dismissal** — Tap outside fields to dismiss the keyboard.
 - **Accessibility** — `Semantics` labels on all field widgets
 - **Custom date/time formats** — use `dateFormat` and `timeFormat` on `FieldMeta`
 - **Typed field config** — `SliderConfig`, `DateConfig`, `ImageConfig`, and more via `FieldConfig`
@@ -676,9 +676,27 @@ RjForm(
 
 ---
 
+## Examples & Demo
+
+A minimal working example is included in the `/example` folder for quick testing.
+
+For a full-featured demo application with multiple screens and advanced use cases, check:
+
+👉 [https://github.com/ReturajProshad/rj_form_engine_demo](https://github.com/ReturajProshad/rj_form_engine_demo)
+
+### Run minimal example
+
+```bash
+git clone https://github.com/ReturajProshad/rj_form_engine
+cd rj_form_engine/example
+flutter pub get
+flutter run
+```
+
+---
 ## Limitations
 
-- **Image picker supports gallery only.** Camera capture is not currently supported.
+- **Image picker supports gallery only.** Camera capture is not currently supported. For camera or file picker functionality, use a custom field via `FieldMeta.custom`.
 - **No built-in form state persistence.** Form data is lost if the app is killed in the background. Implement your own persistence layer if needed.
 - **Single-column layout.** Fields render vertically. Multi-column or grid layouts require custom field builders.
 - **No i18n built-in.** Labels, hints, and error messages are plain strings. You must handle localization yourself (e.g., via `AppLocalizations.of(context)`).
