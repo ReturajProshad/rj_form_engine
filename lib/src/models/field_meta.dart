@@ -148,9 +148,14 @@ class DateConfig extends FieldConfig {
 /// Config for FieldType.text / textArea
 class TextConfig extends FieldConfig {
   final bool obscureText;
+  final bool toggleObscure;
   final int maxLines;
 
-  const TextConfig({this.obscureText = false, this.maxLines = 1});
+  const TextConfig({
+    this.obscureText = false,
+    this.toggleObscure = false,
+    this.maxLines = 1,
+  });
 }
 
 /// Config for FieldType.timePicker
@@ -197,6 +202,7 @@ class FieldMeta {
   final int maxImages;
   final int maxImageSizeBytes;
   final bool obscureText;
+  final bool toggleObscure;
   final int maxLines;
   final String? dateFormat;
   final String? timeFormat;
@@ -207,7 +213,7 @@ class FieldMeta {
   final int spinnerMin;
   final int spinnerMax;
   final int spinnerStep;
-  final List<DropdownItem> options; // for radio / chip
+  final List<DropdownItem> options;
 
   const FieldMeta({
     required this.key,
@@ -227,6 +233,7 @@ class FieldMeta {
     this.maxImages = 1,
     this.maxImageSizeBytes = 2 * 1024 * 1024,
     this.obscureText = false,
+    this.toggleObscure = false,
     this.maxLines = 1,
     this.dateFormat,
     this.timeFormat,
@@ -278,9 +285,7 @@ class FieldMeta {
       'FieldMeta.section: provide an explicit `key` for "$label".',
     );
 
-    final resolvedKey = (key != null && key.isNotEmpty)
-        ? key
-        : 'section_${++_sectionKeyCounter}_${label.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
+    final resolvedKey = (key != null && key.isNotEmpty) ? key : 'section_${++_sectionKeyCounter}_${label.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
 
     return FieldMeta(
       key: resolvedKey,
@@ -302,9 +307,7 @@ class FieldMeta {
           labelBuilder: sliderLabelBuilder,
         );
 
-  SpinnerConfig get spinnerConfig => config is SpinnerConfig
-      ? config as SpinnerConfig
-      : SpinnerConfig(min: spinnerMin, max: spinnerMax, step: spinnerStep);
+  SpinnerConfig get spinnerConfig => config is SpinnerConfig ? config as SpinnerConfig : SpinnerConfig(min: spinnerMin, max: spinnerMax, step: spinnerStep);
 
   ImageConfig get imageConfig => config is ImageConfig
       ? config as ImageConfig
@@ -323,11 +326,13 @@ class FieldMeta {
 
   TextConfig get textConfig => config is TextConfig
       ? config as TextConfig
-      : TextConfig(obscureText: obscureText, maxLines: maxLines);
+      : TextConfig(
+          obscureText: obscureText,
+          toggleObscure: toggleObscure,
+          maxLines: maxLines,
+        );
 
-  TimeConfig get timeConfig => config is TimeConfig
-      ? config as TimeConfig
-      : TimeConfig(format: timeFormat);
+  TimeConfig get timeConfig => config is TimeConfig ? config as TimeConfig : TimeConfig(format: timeFormat);
 
   FieldMeta copyWith({
     bool? viewOnly,
@@ -336,6 +341,7 @@ class FieldMeta {
     DateTime? firstDate,
     DateTime? lastDate,
     bool? obscureText,
+    bool? toggleObscure,
     int? maxLines,
   }) {
     return FieldMeta(
@@ -355,6 +361,7 @@ class FieldMeta {
       maxImages: maxImages,
       maxImageSizeBytes: maxImageSizeBytes,
       obscureText: obscureText ?? this.obscureText,
+      toggleObscure: toggleObscure ?? this.toggleObscure,
       maxLines: maxLines ?? this.maxLines,
       dateFormat: dateFormat,
       timeFormat: timeFormat,

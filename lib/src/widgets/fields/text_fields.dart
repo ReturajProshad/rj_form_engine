@@ -78,10 +78,12 @@ class _RjTextFieldState extends State<RjTextField> {
   late final FocusNode _focusNode;
   bool _isFocused = false;
   bool _ownsController = false;
+  late bool _obscureText;
 
   @override
   void initState() {
     super.initState();
+    _obscureText = widget.field.obscureText;
     _focusNode = FocusNode()
       ..addListener(() {
         setState(() => _isFocused = _focusNode.hasFocus);
@@ -121,24 +123,44 @@ class _RjTextFieldState extends State<RjTextField> {
       label: widget.field.label,
       hint: widget.field.hint,
       child: TextFormField(
-        obscureText: widget.field.obscureText,
+        obscureText: _obscureText,
         controller: _controller,
         focusNode: _focusNode,
         readOnly: widget.readOnly,
         onTap: widget.onTap,
-        maxLines: widget.field.type == FieldType.textArea ? widget.field.maxLines : 1,
+        maxLines:
+            widget.field.type == FieldType.textArea ? widget.field.maxLines : 1,
         style: widget.theme.inputStyle ??
             TextStyle(
               fontSize: RjResponsive.inputFontSize(widget.width),
               color: const Color(0xFF111827),
             ),
-        keyboardType: widget.field.type == FieldType.textArea ? TextInputType.multiline : TextInputType.text,
+        keyboardType: widget.field.type == FieldType.textArea
+            ? TextInputType.multiline
+            : TextInputType.text,
         decoration: widget.theme.inputDecoration(
           label: widget.field.label,
           hint: widget.field.hint,
           errorText: widget.errorText,
           isFocused: _isFocused,
-          suffixIcon: widget.readOnly ? Icon(Icons.lock_outline, size: RjResponsive.suffixIconSize(widget.width), color: const Color(0xFF9CA3AF)) : null,
+          suffixIcon: widget.readOnly
+              ? Icon(Icons.lock_outline,
+                  size: RjResponsive.suffixIconSize(widget.width),
+                  color: const Color(0xFF9CA3AF))
+              : widget.field.toggleObscure
+                  ? IconButton(
+                      icon: Icon(
+                        _obscureText ? Icons.visibility_off : Icons.visibility,
+                        size: RjResponsive.suffixIconSize(widget.width),
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureText = !_obscureText;
+                        });
+                      },
+                    )
+                  : null,
         ),
         onChanged: widget.onChanged,
       ),
