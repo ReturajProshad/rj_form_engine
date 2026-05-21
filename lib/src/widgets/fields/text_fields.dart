@@ -139,7 +139,7 @@ class _RjTextFieldState extends State<RjTextField> {
             ? TextInputType.multiline
             : TextInputType.text,
         decoration: widget.theme.inputDecoration(
-          label: widget.field.label,
+          label: widget.field.showLabel ? widget.field.label : null,
           hint: widget.field.hint,
           errorText: widget.errorText,
           isFocused: _isFocused,
@@ -241,7 +241,7 @@ class _RjNumberFieldState extends State<RjNumberField> {
               color: const Color(0xFF111827),
             ),
         decoration: widget.theme.inputDecoration(
-          label: widget.field.label,
+          label: widget.field.showLabel ? widget.field.label : null,
           hint: widget.field.hint,
           errorText: widget.errorText,
           isFocused: _isFocused,

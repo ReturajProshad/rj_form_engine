@@ -124,7 +124,7 @@ class _RjDateFieldState extends State<RjDateField> {
               color: const Color(0xFF111827),
             ),
         decoration: widget.theme.inputDecoration(
-          label: widget.field.label,
+          label: widget.field.showLabel ? widget.field.label : null,
           hint: widget.field.hint ?? _hintText,
           errorText: widget.errorText,
           isFocused: _isFocused,

@@ -1,6 +1,96 @@
-## 0.2.1
+## 0.3.0
 
-- Added toggle obscure functionality to show/hide text in password fields.
+> Auto-derivation release — computed fields, label shadowing, chained derivations, and label customization.
+
+### Added
+
+- `FieldDerivation` class — declare that a field's value is auto-computed from other fields via a pure `compute` function
+- `FieldMeta.derivation` property — attach a derivation to any field type
+- `FormController.setValueWithDerivation()` — updates a value and recalculates all affected derived fields
+- `FormController.setValueAndClearDependents()` — now accepts `extraValues` for label shadowing (e.g., `{'groupIdLabel': 'Dairy Cows'}`)
+- `FormController.recomputeAllDerivations()` — recalculates all derived fields after `setAll()` (for edit mode)
+- Label shadowing — dropdown labels are automatically stored alongside IDs (e.g., `groupId` + `groupIdLabel`) so `compute` functions have synchronous access to human-readable text
+- Chained derivations — if field A derives B and B derives C, changing A updates the entire chain in one pass
+- Derived fields are automatically read-only (`AbsorbPointer`) — users cannot manually edit computed values
+- Derived field errors are automatically cleared when a source field changes
+- `RjDropdownField.onChanged` now passes the selected item's label alongside the ID
+
+### Examples
+
+```dart
+// Simple: default_value × 2 → derived_from_default
+FieldMeta(
+  key: 'derived_from_default',
+  label: 'Doubled Value',
+  type: FieldType.number,
+  derivation: FieldDerivation(
+    derivesFrom: ['default_value'],
+    compute: (state) {
+      final val = (state['default_value'] as num?)?.toDouble();
+      return val != null ? val * 2 : null;
+    },
+  ),
+)
+
+// Multi-source: price × quantity → total
+FieldDerivation(
+  derivesFrom: ['price', 'quantity'],
+  compute: (state) {
+    final price = (state['price'] as num?)?.toDouble() ?? 0;
+    final qty   = (state['quantity'] as num?)?.toDouble() ?? 0;
+    return price * qty;
+  },
+)
+
+// Label shadowing: combine dropdown labels into a tag
+FieldDerivation(
+  derivesFrom: ['category', 'item'],
+  compute: (state) {
+    final cat  = state['categoryLabel'] ?? '';
+    final item = state['itemLabel'] ?? '';
+  return [cat, item].where((p) => p.isNotEmpty).join(' - ');
+}
+```
+
+### Added (Label Customization)
+
+- `RjLabel` sealed class — customize field labels with `RjLabelText` (styled text) or `RjLabelCustom` (any widget)
+- `FieldMeta.showLabel` (default `true`) — set to `false` to hide the field label entirely
+- `FieldMeta.labelConfig` — when set with `showLabel: true`, overrides the default label with a custom `RjLabel` widget rendered above the field
+- `RjFormTheme.inputDecoration()` — `label` parameter is now nullable, allowing label suppression at the decoration level
+
+### Examples
+
+```dart
+// Hide the label entirely
+FieldMeta(
+  key: 'no_label',
+  label: 'Hidden Label',
+  type: FieldType.text,
+  showLabel: false,
+)
+
+// Styled text label
+FieldMeta(
+  key: 'styled',
+  label: 'Default',
+  type: FieldType.text,
+  labelConfig: const RjLabelText(
+    text: 'Bold Blue Label',
+    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+  ),
+)
+
+// Custom widget label
+FieldMeta(
+  key: 'custom',
+  label: 'Default',
+  type: FieldType.number,
+  labelConfig: RjLabelCustom((context) => Row(
+    children: [Icon(Icons.star), Text('Custom Label')],
+  )),
+)
+```
 
 ---
 

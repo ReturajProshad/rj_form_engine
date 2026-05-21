@@ -84,25 +84,26 @@ class _RjImageFieldState extends State<RjImageField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Label row
-        Row(
-          children: [
-            Text(
-              widget.field.label,
-              style: theme.labelStyle ??
-                  TextStyle(
-                    fontSize: RjResponsive.labelFontSize(widget.width),
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF374151),
-                  ),
-            ),
-            if (widget.field.required)
+        if (widget.field.showLabel)
+          Row(
+            children: [
               Text(
-                ' *',
-                style: TextStyle(color: theme.errorColor),
+                widget.field.label,
+                style: theme.labelStyle ??
+                    TextStyle(
+                      fontSize: RjResponsive.labelFontSize(widget.width),
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF374151),
+                    ),
               ),
-          ],
-        ),
-        const SizedBox(height: 8),
+              if (widget.field.required)
+                Text(
+                  ' *',
+                  style: TextStyle(color: theme.errorColor),
+                ),
+            ],
+          ),
+        if (widget.field.showLabel) const SizedBox(height: 8),
 
         // Image grid
         Container(

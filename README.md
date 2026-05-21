@@ -39,6 +39,10 @@ RjForm(
 
 ## Features
 
+- **Label customization** — hide labels (`showLabel: false`) or replace them with styled text (`RjLabelText`) or any widget (`RjLabelCustom`)
+- **Auto-derivation** — fields that auto-compute their value from other fields (e.g., `total = price × quantity`)
+- **Label shadowing** — dropdown labels are stored alongside IDs, giving `compute` functions instant access to human-readable text
+- **Chained derivations** — A → B → C cascades update in a single pass
 - **13 field types** — text, number, date, dropdown, textarea, image upload, slider, time picker, spinner, toggle, radio, chip multi-select, custom
 - **Custom fields** — inject any widget via `FieldMeta.custom`
 - **Cascading dropdowns** — parent/child dependency with auto-reload and auto-clear
@@ -87,7 +91,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rj_form_engine: ^0.2.1
+  rj_form_engine: ^0.3.0
 ```
 
 Then run:
@@ -196,6 +200,27 @@ class RegistrationForm extends StatelessWidget {
               required: true,
               dateFormat: 'dd/MM/yyyy',
               validators: [RjValidators.pastDate()],
+            ),
+
+            // Derived field — total = price × quantity
+            FieldMeta(
+              key: 'quantity',
+              label: 'Quantity',
+              type: FieldType.number,
+              required: true,
+            ),
+            FieldMeta(
+              key: 'total_price',
+              label: 'Total Price (auto)',
+              type: FieldType.number,
+              derivation: FieldDerivation(
+                derivesFrom: ['quantity'],
+                compute: (state) {
+                  final qty = (state['quantity'] as num?)?.toDouble() ?? 0;
+                  final basePrice = 29.99; // or fetch from another field
+                  return qty * basePrice;
+                },
+              ),
             ),
 
             // Section header
@@ -334,6 +359,9 @@ class RegistrationForm extends StatelessWidget {
 | `validators` | `List<FieldValidator>` | Additional validation functions. See [Validation](#validation). |
 | `hint` | `String?` | Placeholder text displayed inside the field. |
 | `dependency` | `FieldDependency?` | Controls visibility based on another field's value. See [Dependencies](#conditional-visibility--dependencies). |
+| `derivation` | `FieldDerivation?` | Auto-computes this field's value from other fields. See [FieldDerivation](#fieldderivation-auto-computed-fields). |
+| `showLabel` | `bool` | When `false`, hides the field label entirely. Default `true`. |
+| `labelConfig` | `RjLabel?` | Custom label override. Use [RjLabelText] for styled text or [RjLabelCustom] for any widget. |
 | `dropdownSource` | `DropdownSource?` | Item source for dropdown fields. Accepts static or async data. |
 | `options` | `List<DropdownItem>` | Options for radio and chip fields. |
 | `config` | `FieldConfig?` | Typed configuration (e.g., `SliderConfig`, `DateConfig`). Takes precedence over flat params. |
@@ -364,6 +392,112 @@ FieldMeta(
 ),
 ```
 
+### FieldDerivation (Auto-Computed Fields)
+
+Fields can auto-compute their value from other fields using `FieldDerivation`. The derivation declares *which fields it derives from* and *how to compute the value*:
+
+```dart
+FieldMeta(
+  key: 'total',
+  label: 'Total',
+  type: FieldType.number,
+  derivation: FieldDerivation(
+    derivesFrom: ['price', 'quantity'],
+    compute: (state) {
+      final price = (state['price'] as num?)?.toDouble() ?? 0;
+      final qty   = (state['quantity'] as num?)?.toDouble() ?? 0;
+      return price * qty;
+    },
+  ),
+)
+```
+
+**How it works:**
+
+1. When `price` or `quantity` changes, the engine finds all fields whose `derivesFrom` includes the changed key.
+2. It runs the `compute` function with the full form state map and stores the result.
+3. Derived fields are automatically **read-only** — users cannot type into them.
+4. Chained derivations (A → B → C) update in a single pass automatically.
+
+**Label Shadowing for Dropdowns:**
+
+Since dropdowns store IDs but derivations often need labels, the engine automatically stores the selected label as `{key}Label` alongside the ID. For example, selecting `"Dairy Cows"` from a `groupId` dropdown stores both:
+
+- `groupId = "5"` (the ID)
+- `groupIdLabel = "Dairy Cows"` (the label)
+
+Your `compute` function can then read labels directly:
+
+```dart
+FieldDerivation(
+  derivesFrom: ['category', 'item'],
+  compute: (state) {
+    final cat  = state['categoryLabel'] ?? '';
+    final item = state['itemLabel'] ?? '';
+    return [cat, item].where((p) => p.isNotEmpty).join(' - ');
+  },
+)
+```
+
+**Edit Mode:**
+
+When loading existing data with `initialValues` or `setAll()`, call `recomputeAllDerivations()` to ensure computed fields reflect the loaded data:
+
+```dart
+controller.setAll(loadedData);
+controller.recomputeAllDerivations(fields);
+```
+
+This is called automatically when using `RjForm(initialValues: ...)`.
+
+### Label Customization
+
+By default, every field renders its `label` text above the input. You can control or replace this with `showLabel` and `labelConfig`:
+
+```dart
+// Hide the label entirely (showLabel: false)
+FieldMeta(
+  key: 'no_label',
+  label: 'Hidden Label',
+  type: FieldType.text,
+  showLabel: false,
+  hint: 'No label shown above',
+)
+
+// Styled text label via RjLabelText
+FieldMeta(
+  key: 'styled_label',
+  label: 'Default (not shown)',
+  type: FieldType.text,
+  labelConfig: const RjLabelText(
+    text: 'Styled Label',
+    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+  ),
+)
+
+// Custom widget label via RjLabelCustom
+FieldMeta(
+  key: 'custom_label',
+  label: 'Default (not shown)',
+  type: FieldType.number,
+  labelConfig: RjLabelCustom((context) {
+    return Row(
+      children: [
+        Icon(Icons.star, color: Colors.amber, size: 18),
+        SizedBox(width: 8),
+        Text('Custom Widget Label'),
+      ],
+    );
+  }),
+)
+```
+
+**How it works:**
+- `showLabel` (default `true`) — when `false`, no label is rendered at all.
+- `labelConfig` — when set and `showLabel` is `true`, the default label is suppressed and the custom `RjLabel` widget is rendered above the input field.
+- `RjLabelText` provides full text styling (`style`, `textAlign`, `maxLines`, `overflow`, `padding`).
+- `RjLabelCustom` accepts a `WidgetBuilder` for any custom widget.
+
 ### FormController
 
 `FormController` manages form state externally. It extends `ChangeNotifier` and works with any state management approach.
@@ -389,6 +523,10 @@ if (_controller.validate(fields)) {
 // Set or clear values
 _controller.setValue('name', 'John');
 _controller.clear();
+
+// Recompute derived fields after bulk-loading data
+_controller.setAll(loadedData);
+_controller.recomputeAllDerivations(fields);
 ```
 
 **When to use an external controller:**
@@ -623,6 +761,33 @@ RjForm(
 )
 ```
 
+### Auto-Computed Fields (Derivation)
+
+```dart
+RjForm(
+  fields: [
+    FieldMeta(key: 'price',    label: 'Price',    type: FieldType.number, required: true),
+    FieldMeta(key: 'quantity', label: 'Quantity', type: FieldType.number, required: true),
+    FieldMeta(
+      key: 'total',
+      label: 'Total (auto)',
+      type: FieldType.number,
+      derivation: FieldDerivation(
+        derivesFrom: ['price', 'quantity'],
+        compute: (state) {
+          final price = (state['price'] as num?)?.toDouble() ?? 0;
+          final qty   = (state['quantity'] as num?)?.toDouble() ?? 0;
+          return price * qty;
+        },
+      ),
+    ),
+  ],
+  onSubmit: (_) async {},
+)
+```
+
+> Derived fields are automatically read-only. Users can edit `price` and `quantity`; `total` updates instantly.
+
 ### Error Summary
 
 ```dart
@@ -706,6 +871,7 @@ flutter run
 
 ## Roadmap
 
+- [x] Auto-derived / computed fields with dependency tracking
 - [ ] Camera support for image fields
 - [ ] Multi-column / grid layout support
 - [ ] Built-in i18n / localization
