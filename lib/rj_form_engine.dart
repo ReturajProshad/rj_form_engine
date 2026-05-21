@@ -2,7 +2,7 @@
 library rj_form_engine;
 
 // Models
-export 'src/models/field_meta.dart';
+export 'src/models/field_meta.dart' show FieldMeta, FieldType, FieldDependency, FieldDerivation, FieldConfig, SliderConfig, SpinnerConfig, ImageConfig, DateConfig, TextConfig, TimeConfig, FieldValidator, CustomFieldBuilder, RjLabel, RjLabelText, RjLabelCustom;
 export 'src/models/dropdown_item.dart';
 export 'src/models/dropdown_source.dart';
 export 'src/models/form_result.dart';

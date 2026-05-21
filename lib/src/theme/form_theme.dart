@@ -84,8 +84,11 @@ class RjFormTheme {
   });
 
   /// Returns an [InputDecoration] pre-configured with this theme's values.
+  ///
+  /// Pass [label] as `null` to suppress the label text entirely
+  /// (e.g. when using [FieldMeta.showLabel] = false or a [FieldMeta.labelConfig]).
   InputDecoration inputDecoration({
-    required String label,
+    String? label,
     String? hint,
     String? errorText,
     bool isFocused = false,

@@ -8,7 +8,8 @@ import '../../utils/rj_time_utils.dart';
 // ─── Shared label row helper ─────────────────────────────────────────────────
 
 Widget _fieldLabel(String label, bool required, RjFormTheme theme,
-    {double width = 0}) {
+    {double width = 0, bool showLabel = true}) {
+  if (!showLabel) return const SizedBox.shrink();
   return Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Row(
@@ -74,7 +75,8 @@ class RjSliderField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fieldLabel(field.label, field.required, theme, width: width),
+        _fieldLabel(field.label, field.required, theme,
+            width: width, showLabel: field.showLabel),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
@@ -239,7 +241,7 @@ class _RjTimePickerFieldState extends State<RjTimePickerField> {
             color: const Color(0xFF111827),
           ),
       decoration: widget.theme.inputDecoration(
-        label: widget.field.label,
+        label: widget.field.showLabel ? widget.field.label : null,
         hint: widget.field.hint ?? 'Select time',
         errorText: widget.errorText,
         suffixIcon: Icon(
@@ -289,7 +291,8 @@ class RjSpinnerField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fieldLabel(field.label, field.required, theme, width: width),
+        _fieldLabel(field.label, field.required, theme,
+            width: width, showLabel: field.showLabel),
         Container(
           decoration: BoxDecoration(
             color: theme.fieldFillColor,
@@ -445,21 +448,22 @@ class RjToggleField extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          field.label,
-                          style: theme.labelStyle ??
-                              TextStyle(
-                                fontSize: labelFontSize,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF374151),
-                              ),
-                        ),
-                        if (field.required)
-                          Text(' *', style: TextStyle(color: theme.errorColor)),
-                      ],
-                    ),
+                    if (field.showLabel)
+                      Row(
+                        children: [
+                          Text(
+                            field.label,
+                            style: theme.labelStyle ??
+                                TextStyle(
+                                  fontSize: labelFontSize,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF374151),
+                                ),
+                          ),
+                          if (field.required)
+                            Text(' *', style: TextStyle(color: theme.errorColor)),
+                        ],
+                      ),
                     if (field.hint != null)
                       Text(
                         field.hint!,
@@ -518,7 +522,8 @@ class RjRadioField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fieldLabel(field.label, field.required, theme, width: width),
+        _fieldLabel(field.label, field.required, theme,
+            width: width, showLabel: field.showLabel),
         Container(
           decoration: BoxDecoration(
             color: theme.fieldFillColor,
@@ -597,7 +602,8 @@ class RjChipField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fieldLabel(field.label, field.required, theme, width: width),
+        _fieldLabel(field.label, field.required, theme,
+            width: width, showLabel: field.showLabel),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),

@@ -70,16 +70,35 @@ class FormController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates a value and recursively clears all downstream dependent fields.
+  /// Updates a value and computes derivations for non-cascading fields.
   ///
-  /// Used internally for cascading dropdowns.
-  void setValueAndClearDependents(
+  /// Used internally for text, number, date, etc.
+  void setValueWithDerivation(
     String key,
     dynamic value,
     List<FieldMeta> fields,
   ) {
     _values = {..._values, key: value};
+    _computeDerivationsRecursively(key, fields, {});
+    notifyListeners();
+  }
+
+  /// Updates a value, clears downstream dependents, handles labels, and
+  /// computes derivations in a single pass.
+  ///
+  /// [extraValues] is used for label shadowing — e.g.,
+  /// `{'groupIdLabel': 'Dairy Cows'}` is stored alongside `groupId`.
+  ///
+  /// Used internally for cascading dropdowns.
+  void setValueAndClearDependents(
+    String key,
+    dynamic value,
+    List<FieldMeta> fields, {
+    Map<String, dynamic> extraValues = const {},
+  }) {
+    _values = {..._values, key: value, ...extraValues};
     _clearDependentsRecursively(key, fields, {});
+    _computeDerivationsRecursively(key, fields, {});
     notifyListeners();
   }
 
@@ -96,9 +115,45 @@ class FormController extends ChangeNotifier {
     );
 
     for (final field in dependents) {
-      _values = {..._values}..remove(field.key);
+      _values = {..._values}
+        ..remove(field.key)
+        ..remove('${field.key}Label');
       _clearDependentsRecursively(field.key, fields, visited);
     }
+  }
+
+  /// Recomputes every field whose [FieldDerivation.derivesFrom] contains
+  /// [changedKey], then recurses so chained derivations (A → B → C) work.
+  void _computeDerivationsRecursively(
+    String changedKey,
+    List<FieldMeta> fields,
+    Set<String> visited,
+  ) {
+    if (visited.contains(changedKey)) return;
+    visited.add(changedKey);
+
+    final derivedFields = fields.where(
+      (f) =>
+          f.derivation != null &&
+          f.derivation!.derivesFrom.contains(changedKey),
+    );
+
+    for (final field in derivedFields) {
+      if (visited.contains(field.key)) continue;
+      final computedValue = field.derivation!.compute(_values);
+      _values = {..._values, field.key: computedValue};
+      _computeDerivationsRecursively(field.key, fields, visited);
+    }
+  }
+
+  /// Recomputes all derived fields. Call after [setAll] to ensure consistency.
+  void recomputeAllDerivations(List<FieldMeta> fields) {
+    final derivedFields = fields.where((f) => f.derivation != null).toList();
+    for (final field in derivedFields) {
+      final computedValue = field.derivation!.compute(_values);
+      _values = {..._values, field.key: computedValue};
+    }
+    notifyListeners();
   }
 
   // ─── Errors ────────────────────────────────────────────────────────────────

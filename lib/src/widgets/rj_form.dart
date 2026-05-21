@@ -54,8 +54,12 @@ class _FieldBuilder extends StatefulWidget {
   final FieldMeta field;
   final double width;
   final void Function(String key, dynamic value) setValue;
-  final void Function(String key, dynamic value, List<FieldMeta> fields)
-      setValueCascade;
+  final void Function(
+    String key,
+    dynamic value,
+    List<FieldMeta> fields, {
+    Map<String, dynamic> extraValues,
+  }) setValueCascade;
   final void Function(String key, String message) setError;
 
   const _FieldBuilder({
@@ -143,17 +147,56 @@ class _FieldBuilderState extends State<_FieldBuilder> {
       return const SizedBox.shrink();
     }
 
-    final effectiveField =
-        scope.viewOnly ? field.copyWith(viewOnly: true) : field;
+    final isDerived = field.derivation != null;
+    final isViewOnly = scope.viewOnly;
+    final effectiveField = isViewOnly ? field.copyWith(viewOnly: true) : field;
+    // When labelConfig is set, suppress default label in the field widget
+    // so the custom label (rendered above) doesn't conflict.
+    final fieldForWidget = effectiveField.labelConfig != null && effectiveField.showLabel
+        ? effectiveField.copyWith(showLabel: false)
+        : effectiveField;
+    final absorbing = effectiveField.viewOnly || isDerived;
+
+    Widget fieldWidget = _buildFieldWidget(fieldForWidget, scope);
+
+    // Render custom labelConfig above the field when showLabel is true
+    if (effectiveField.showLabel && effectiveField.labelConfig != null) {
+      final config = effectiveField.labelConfig!;
+      Widget labelWidget;
+      if (config is RjLabelText) {
+        labelWidget = Padding(
+          padding: config.padding ?? EdgeInsets.zero,
+          child: Text(
+            config.text,
+            style: config.style,
+            textAlign: config.textAlign,
+            maxLines: config.maxLines,
+            overflow: config.overflow,
+          ),
+        );
+      } else if (config is RjLabelCustom) {
+        labelWidget = config.builder(context);
+      } else {
+        labelWidget = const SizedBox.shrink();
+      }
+      fieldWidget = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          labelWidget,
+          SizedBox(height: RjResponsive.fieldSpacing(widget.width) * 0.4),
+          fieldWidget,
+        ],
+      );
+    }
 
     return AbsorbPointer(
-      absorbing: effectiveField.viewOnly,
+      absorbing: absorbing,
       child: Opacity(
         opacity: effectiveField.viewOnly ? 0.6 : 1.0,
         child: Padding(
           padding:
               EdgeInsets.only(bottom: RjResponsive.fieldSpacing(widget.width)),
-          child: _buildFieldWidget(effectiveField, scope),
+          child: fieldWidget,
         ),
       ),
     );
@@ -214,7 +257,16 @@ class _FieldBuilderState extends State<_FieldBuilder> {
           parentValue: _lastParentValue,
           errorText: error,
           theme: theme,
-          onChanged: (v) => widget.setValueCascade(field.key, v, scope.fields),
+          onChanged: (v, {label}) {
+            final extra = <String, dynamic>{};
+            if (label != null) extra['${field.key}Label'] = label;
+            widget.setValueCascade(
+              field.key,
+              v,
+              scope.fields,
+              extraValues: extra,
+            );
+          },
           width: width,
         );
 
@@ -544,6 +596,7 @@ class _RjFormState extends State<RjForm> {
 
     if (widget.initialValues != null) {
       _controller.setAll(widget.initialValues!);
+      _controller.recomputeAllDerivations(widget.fields);
     }
   }
 
@@ -555,15 +608,37 @@ class _RjFormState extends State<RjForm> {
   }
 
   void _setValue(String key, dynamic value) {
-    _controller.setValue(key, value);
+    _controller.setValueWithDerivation(key, value, widget.fields);
     _controller.clearError(key);
+    _clearDerivedFieldErrors(key);
     widget.onChanged?.call(key, value);
   }
 
-  void _setValueCascade(String key, dynamic value, List<FieldMeta> fields) {
-    _controller.setValueAndClearDependents(key, value, fields);
+  void _setValueCascade(
+    String key,
+    dynamic value,
+    List<FieldMeta> fields, {
+    Map<String, dynamic> extraValues = const {},
+  }) {
+    _controller.setValueAndClearDependents(
+      key,
+      value,
+      fields,
+      extraValues: extraValues,
+    );
     _controller.clearError(key);
+    _clearDerivedFieldErrors(key);
     widget.onChanged?.call(key, value);
+  }
+
+  /// When a source field changes, clear errors on its derived fields too.
+  void _clearDerivedFieldErrors(String changedKey) {
+    for (final field in widget.fields) {
+      if (field.derivation != null &&
+          field.derivation!.derivesFrom.contains(changedKey)) {
+        _controller.clearError(field.key);
+      }
+    }
   }
 
   Future<void> _submit() async {

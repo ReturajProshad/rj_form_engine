@@ -167,6 +167,40 @@ class TimeConfig extends FieldConfig {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Controls how a field's label is rendered above the input.
+///
+/// Use [RjLabelText] for text labels with full styling control, or
+/// [RjLabelCustom] to embed any widget as the label.
+sealed class RjLabel {
+  const RjLabel();
+}
+
+/// A text label with optional style overrides.
+class RjLabelText extends RjLabel {
+  final String text;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+  final int? maxLines;
+  final TextOverflow? overflow;
+  final EdgeInsetsGeometry? padding;
+
+  const RjLabelText({
+    required this.text,
+    this.style,
+    this.textAlign,
+    this.maxLines,
+    this.overflow,
+    this.padding,
+  });
+}
+
+/// A custom widget label built by the given [builder].
+class RjLabelCustom extends RjLabel {
+  final WidgetBuilder builder;
+
+  const RjLabelCustom(this.builder);
+}
+
 class FieldDependency {
   final String dependsOn;
   final bool Function(dynamic parentValue)? condition;
@@ -180,6 +214,32 @@ class FieldDependency {
   }
 }
 
+/// Declares that a field's value is auto-computed from other fields.
+///
+/// [derivesFrom] lists the field keys that trigger recomputation.
+/// [compute] receives the full form state and returns the derived value.
+///
+/// Example:
+/// ```dart
+/// FieldDerivation(
+///   derivesFrom: ['price', 'quantity'],
+///   compute: (state) {
+///     final price = (state['price'] as num?)?.toDouble() ?? 0;
+///     final qty   = (state['quantity'] as num?)?.toDouble() ?? 0;
+///     return price * qty;
+///   },
+/// )
+/// ```
+class FieldDerivation {
+  final List<String> derivesFrom;
+  final dynamic Function(Map<String, dynamic> formState) compute;
+
+  const FieldDerivation({
+    required this.derivesFrom,
+    required this.compute,
+  });
+}
+
 class FieldMeta {
   final String key;
   final String label;
@@ -188,6 +248,20 @@ class FieldMeta {
   final DropdownSource? dropdownSource;
   final List<FieldValidator> validators;
   final FieldDependency? dependency;
+  final FieldDerivation? derivation;
+
+  /// Whether to render the field label. Defaults to true.
+  ///
+  /// When false, no label is shown — neither the default `label` text nor
+  /// a custom [labelConfig]. Use [labelConfig] to provide a styled text or
+  /// custom widget label while keeping `showLabel` true.
+  final bool showLabel;
+
+  /// Custom label configuration. When set and [showLabel] is true, overrides
+  /// the default label rendering with a styled [RjLabelText] or a custom
+  /// widget via [RjLabelCustom].
+  final RjLabel? labelConfig;
+
   final bool viewOnly;
   final String? hint;
   final CustomFieldBuilder? builder;
@@ -223,6 +297,9 @@ class FieldMeta {
     this.dropdownSource,
     this.validators = const [],
     this.dependency,
+    this.derivation,
+    this.showLabel = true,
+    this.labelConfig,
     this.viewOnly = false,
     this.hint,
     this.builder,
@@ -343,6 +420,9 @@ class FieldMeta {
     bool? obscureText,
     bool? toggleObscure,
     int? maxLines,
+    FieldDerivation? derivation,
+    bool? showLabel,
+    RjLabel? labelConfig,
   }) {
     return FieldMeta(
       key: key,
@@ -352,6 +432,9 @@ class FieldMeta {
       dropdownSource: dropdownSource,
       validators: validators,
       dependency: dependency,
+      derivation: derivation ?? this.derivation,
+      showLabel: showLabel ?? this.showLabel,
+      labelConfig: labelConfig ?? this.labelConfig,
       viewOnly: viewOnly ?? this.viewOnly,
       hint: hint ?? this.hint,
       builder: builder,

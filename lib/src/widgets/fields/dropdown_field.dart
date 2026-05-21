@@ -43,7 +43,7 @@ class RjDropdownField extends StatefulWidget {
   final dynamic parentValue;
   final String? errorText;
   final RjFormTheme theme;
-  final void Function(String? value) onChanged;
+  final void Function(String? value, {String? label}) onChanged;
   final double width;
 
   const RjDropdownField({
@@ -170,7 +170,7 @@ class _RjDropdownFieldState extends State<RjDropdownField> {
                 _items.any((e) => e.id == widget.value) ? widget.value : null,
             isExpanded: true,
             decoration: widget.theme.inputDecoration(
-              label: widget.field.label,
+              label: widget.field.showLabel ? widget.field.label : null,
               hint: isWaitingForParent
                   ? 'Select ${widget.field.dependency?.dependsOn} first'
                   : widget.field.hint ?? 'Select ${widget.field.label}',
@@ -192,7 +192,13 @@ class _RjDropdownFieldState extends State<RjDropdownField> {
                   ),
                 )
                 .toList(),
-            onChanged: isWaitingForParent ? null : widget.onChanged,
+            onChanged: isWaitingForParent
+                ? null
+                : (v) {
+                    final label =
+                        _items.where((e) => e.id == v).map((e) => e.label).firstOrNull;
+                    widget.onChanged(v, label: label);
+                  },
           ),
         ),
       ),
@@ -202,7 +208,7 @@ class _RjDropdownFieldState extends State<RjDropdownField> {
   Widget _buildShell({required Widget child}) {
     return InputDecorator(
       decoration: widget.theme.inputDecoration(
-        label: widget.field.label,
+        label: widget.field.showLabel ? widget.field.label : null,
         errorText: widget.errorText,
       ),
       child: child,
