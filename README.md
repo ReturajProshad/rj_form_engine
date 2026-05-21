@@ -79,9 +79,10 @@ https://github.com/user-attachments/assets/420abb19-a3e8-4ae9-b4c7-3b6e0881237c
 |:---:|:---:|:---:|
 | <img src="https://github.com/user-attachments/assets/3cebb8a9-8e70-49f0-a8bb-c4df34855e14" width="250"> | <img src="https://github.com/user-attachments/assets/189e073e-af23-48a3-a379-57e9a80d1ccd" width="250"> | <img src="https://github.com/user-attachments/assets/d31624e9-01c0-4ec3-8ac0-49d0a229f68d" width="250"> |
 
-| Custom Fields Support | Form Entry Page |
-|:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/b0f4f59e-860b-4a81-9180-bdc941f2f5f4" width="250"> | <img src="https://github.com/user-attachments/assets/9fc8ac3b-8acc-4029-a5f7-07fd6d42ed84" width="250"> |
+| Custom Fields Support | Derivation Fields Example Page | Label Shadowing & Customization | Form Entry Page |
+|:---:|:---:|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/b0f4f59e-860b-4a81-9180-bdc941f2f5f4" width="250">|  <img width="250" alt="derivation Demo -1" src="https://github.com/user-attachments/assets/1faaada4-d49d-4ed7-afe0-bc1c213466bc" />| <img width="250" alt="label_customization" src="https://github.com/user-attachments/assets/c66d0dfc-74ba-416a-96b0-1c2f41cd9e86" /> | <img src="https://github.com/user-attachments/assets/9fc8ac3b-8acc-4029-a5f7-07fd6d42ed84" width="250"> |
+
 
 ---
 
