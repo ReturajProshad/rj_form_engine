@@ -93,7 +93,10 @@ FieldMeta(
 ```
 
 ---
+## 0.2.1
 
+- Added toggle obscure functionality to show/hide text in password fields.
+---
 ## 0.2.0
 
 > Refactor release — improved API consistency, performance, and type safety.
