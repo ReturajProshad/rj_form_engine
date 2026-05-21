@@ -11,9 +11,7 @@ topics:
   - form-builder
   - dynamic-forms
   - validation
-  - cascading-dropdowns
-  - auto-derivation
-  - computed-fields
+  - cascading-dropdowns-auto-derivation
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
