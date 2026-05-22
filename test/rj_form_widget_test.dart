@@ -7,16 +7,15 @@ import 'package:rj_form_engine/rj_form_engine.dart';
 Widget _wrap(Widget child) =>
     MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
 
-final _textField = FieldMeta(
-    key: 'name', label: 'Full Name', type: FieldType.text, required: true);
+final _textField = FieldMeta.text(
+    key: 'name', label: 'Full Name', required: true);
 final _numberField =
-    FieldMeta(key: 'age', label: 'Age', type: FieldType.number);
+    FieldMeta.number(key: 'age', label: 'Age');
 final _textAreaField =
-    FieldMeta(key: 'bio', label: 'Bio', type: FieldType.textArea);
-final _staticDropdown = FieldMeta(
+    FieldMeta.textArea(key: 'bio', label: 'Bio');
+final _staticDropdown = FieldMeta.dropdown(
   key: 'status',
   label: 'Status',
-  type: FieldType.dropdown,
   dropdownSource: DropdownSource.static([
     DropdownItem(id: 'active', label: 'Active'),
     DropdownItem(id: 'inactive', label: 'Inactive'),

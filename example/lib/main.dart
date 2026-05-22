@@ -41,10 +41,9 @@ Future<List<DropdownItem>> fetchCities({String? parentValue}) async {
 
 final _fields = [
   // ── Basic text ──
-  FieldMeta(
+  FieldMeta.text(
     key: 'full_name',
     label: 'Full Name',
-    type: FieldType.text,
     required: true,
     validators: [
       RjValidators.minLength(3),
@@ -53,37 +52,33 @@ final _fields = [
   ),
 
   // ── Email with built-in validator ──
-  FieldMeta(
+  FieldMeta.text(
     key: 'email',
     label: 'Email Address',
-    type: FieldType.text,
     required: true,
     validators: [RjValidators.email()],
   ),
 
   // ── Phone with BD validator ──
-  FieldMeta(
+  FieldMeta.text(
     key: 'phone',
     label: 'Mobile Number',
-    type: FieldType.text,
     hint: '01XXXXXXXXX',
     validators: [RjValidators.bdPhone()],
   ),
 
   // ── Number with range ──
-  FieldMeta(
+  FieldMeta.number(
     key: 'age',
     label: 'Age',
-    type: FieldType.number,
     required: true,
     validators: [RjValidators.between(1, 120)],
   ),
 
   // ── Date ──
-  FieldMeta(
+  FieldMeta.date(
     key: 'dob',
     label: 'Date of Birth',
-    type: FieldType.date,
     required: true,
     firstDate: DateTime(1900),
     lastDate: DateTime.now(),
@@ -91,25 +86,21 @@ final _fields = [
   ),
 
   // ── Time picker ──
-  const FieldMeta(
+  const FieldMeta.timePicker(
     key: 'preferred_time',
     label: 'Preferred Contact Time',
-    type: FieldType.timePicker,
   ),
 
   // ── Dropdown cascade ──
-  FieldMeta(
+  FieldMeta.dropdown(
     key: 'country',
     label: 'Country',
-    type: FieldType.dropdown,
     required: true,
     dropdownSource: DropdownSource.async(fetchCountries),
   ),
-  FieldMeta(
+  FieldMeta.dropdown(
     key: 'city',
     label: 'City',
-    type: FieldType.dropdown,
-    // dependsOn: 'country',
     dependency: FieldDependency(
       dependsOn: 'country',
       condition: (v) => v != null,
@@ -118,10 +109,9 @@ final _fields = [
   ),
 
   // ── Static dropdown ──
-  FieldMeta(
+  FieldMeta.dropdown(
     key: 'status',
     label: 'Account Status',
-    type: FieldType.dropdown,
     dropdownSource: DropdownSource.static([
       const DropdownItem(id: 'active', label: 'Active'),
       const DropdownItem(id: 'inactive', label: 'Inactive'),
@@ -130,10 +120,9 @@ final _fields = [
   ),
 
   // ── Radio ──
-  const FieldMeta(
+  const FieldMeta.radio(
     key: 'gender',
     label: 'Gender',
-    type: FieldType.radio,
     required: true,
     options: [
       DropdownItem(id: 'male', label: 'Male'),
@@ -143,10 +132,9 @@ final _fields = [
   ),
 
   // ── Chip (multi-select) ──
-  FieldMeta(
+  FieldMeta.chip(
     key: 'interests',
     label: 'Interests',
-    type: FieldType.chip,
     required: true,
     validators: [
       RjValidators.minSelect(1, message: 'Pick at least one interest')
@@ -162,10 +150,9 @@ final _fields = [
   ),
 
   // ── Slider ──
-  FieldMeta(
+  FieldMeta.slider(
     key: 'experience_years',
     label: 'Years of Experience',
-    type: FieldType.slider,
     sliderMin: 0,
     sliderMax: 30,
     sliderDivisions: 30,
@@ -173,10 +160,9 @@ final _fields = [
   ),
 
   // ── Spinner ──
-  FieldMeta(
+  FieldMeta.spinner(
     key: 'team_size',
     label: 'Team Size',
-    type: FieldType.spinner,
     spinnerMin: 1,
     spinnerMax: 500,
     spinnerStep: 5,
@@ -184,27 +170,24 @@ final _fields = [
   ),
 
   // ── Toggle ──
-  const FieldMeta(
+  const FieldMeta.toggle(
     key: 'notifications',
     label: 'Enable Notifications',
-    type: FieldType.toggle,
     hint: 'Receive alerts for important updates',
   ),
 
   // ── Textarea ──
-  FieldMeta(
+  FieldMeta.textArea(
     key: 'bio',
     label: 'Short Bio',
-    type: FieldType.textArea,
     hint: 'Tell us about yourself...',
     validators: [RjValidators.maxLength(300)],
   ),
 
   // ── Image upload ──
-  const FieldMeta(
+  const FieldMeta.image(
     key: 'profile_image',
     label: 'Profile Photo',
-    type: FieldType.image,
     maxImages: 2,
   ),
 
@@ -258,10 +241,9 @@ final _fields = [
   ),
 
   // ── Conditional field — shown only when country == 'bd' ──
-  FieldMeta(
+  FieldMeta.text(
     key: 'nid',
     label: 'National ID (NID)',
-    type: FieldType.text,
     hint: '10 or 17 digit NID number',
     dependency: FieldDependency(
       dependsOn: 'country',

@@ -100,8 +100,7 @@ void main() {
 
     test('validate returns true when all required fields are filled', () {
       final fields = [
-        FieldMeta(
-            key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta.text(key: 'name', label: 'Name', required: true),
       ];
       controller.setValue('name', 'John');
 
@@ -111,8 +110,7 @@ void main() {
 
     test('validate returns false and sets error for empty required field', () {
       final fields = [
-        FieldMeta(
-            key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta.text(key: 'name', label: 'Name', required: true),
       ];
 
       expect(controller.validate(fields), false);
@@ -121,8 +119,7 @@ void main() {
 
     test('validate treats whitespace-only string as empty', () {
       final fields = [
-        FieldMeta(
-            key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta.text(key: 'name', label: 'Name', required: true),
       ];
       controller.setValue('name', '   ');
 
@@ -132,10 +129,9 @@ void main() {
 
     test('validate runs custom validators', () {
       final fields = [
-        FieldMeta(
+        FieldMeta.number(
           key: 'age',
           label: 'Age',
-          type: FieldType.number,
           validators: [
             (v) => (v is num && v < 0) ? 'Age must be positive' : null
           ],
@@ -149,8 +145,8 @@ void main() {
 
     test('validate skips hidden fields', () {
       final fields = [
-        FieldMeta(
-            key: 'type', label: 'Type', type: FieldType.text, required: true),
+        FieldMeta.text(key: 'type', label: 'Type', required: true),
+        // Use old-style constructor to prove backward compat
         FieldMeta(
           key: 'other',
           label: 'Other',
@@ -170,11 +166,7 @@ void main() {
 
     test('validate treats empty list as empty for required image field', () {
       final fields = [
-        FieldMeta(
-            key: 'photo',
-            label: 'Photo',
-            type: FieldType.image,
-            required: true),
+        FieldMeta.image(key: 'photo', label: 'Photo', required: true),
       ];
       controller.setValue('photo', <String>[]);
 
@@ -184,8 +176,7 @@ void main() {
 
     test('validate clears previous errors before re-validating', () {
       final fields = [
-        FieldMeta(
-            key: 'name', label: 'Name', type: FieldType.text, required: true),
+        FieldMeta.text(key: 'name', label: 'Name', required: true),
       ];
 
       controller.validate(fields); // sets error
