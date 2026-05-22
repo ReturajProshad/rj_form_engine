@@ -17,12 +17,12 @@ Building forms in Flutter is repetitive. Every screen has the same patterns — 
 ```dart
 RjForm(
   fields: [
-    FieldMeta(key: 'name',    label: 'Full Name',     type: FieldType.text,     required: true),
-    FieldMeta(key: 'dob',     label: 'Date of Birth', type: FieldType.date),
-    FieldMeta(key: 'country', label: 'Country',       type: FieldType.dropdown,
+    FieldMeta.text(key: 'name', label: 'Full Name', required: true),
+    FieldMeta.date(key: 'dob', label: 'Date of Birth'),
+    FieldMeta.dropdown(key: 'country', label: 'Country',
       dropdownSource: DropdownSource.async(fetchCountries),
     ),
-    FieldMeta(key: 'city',    label: 'City',          type: FieldType.dropdown,
+    FieldMeta.dropdown(key: 'city', label: 'City',
       dependency: FieldDependency(dependsOn: 'country'), // cascades automatically
       dropdownSource: DropdownSource.async(
         ({parentValue}) async => fetchCities(parentValue: parentValue),
@@ -39,6 +39,8 @@ RjForm(
 
 ## Features
 
+- **Typed factory constructors** — `FieldMeta.text()`, `.number()`, `.date()`, `.dropdown()` and more — each surfaces only the params that make sense for that field type, with full IDE autocompletion
+- **Responsive grid layout** — mobile-first 12-column grid with `RjSpan` (`full`/`half`/`third`/`quarter`) and `RjLayout`. Phone always stacks full-width; tablet/desktop uses declared spans automatically
 - **Label customization** — hide labels (`showLabel: false`) or replace them with styled text (`RjLabelText`) or any widget (`RjLabelCustom`)
 - **Auto-derivation** — fields that auto-compute their value from other fields (e.g., `total = price × quantity`)
 - **Label shadowing** — dropdown labels are stored alongside IDs, giving `compute` functions instant access to human-readable text
@@ -92,7 +94,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rj_form_engine: ^0.3.0
+  rj_form_engine: ^1.0.0
 ```
 
 Then run:
@@ -112,18 +114,16 @@ import 'package:rj_form_engine/rj_form_engine.dart';
 
 RjForm(
   fields: [
-    FieldMeta(
+    FieldMeta.text(
       key: 'email',
       label: 'Email Address',
-      type: FieldType.text,
       required: true,
       hint: 'Enter your email',
       validators: [RjValidators.email()],
     ),
-    FieldMeta(
+    FieldMeta.number(
       key: 'age',
       label: 'Age',
-      type: FieldType.number,
       required: true,
       validators: [RjValidators.min(18, message: 'Must be 18 or older')],
     ),
@@ -159,30 +159,27 @@ class RegistrationForm extends StatelessWidget {
             // Section header
             FieldMeta.section(key: 'personal_info', label: 'Personal Information'),
 
-            // Text field
-            FieldMeta(
+            // Text fields — side by side on tablet+
+            FieldMeta.text(
               key: 'full_name',
               label: 'Full Name',
-              type: FieldType.text,
               required: true,
               hint: 'John Doe',
               validators: [RjValidators.minLength(2)],
+              layout: const RjLayout(md: RjSpan.half),
             ),
-
-            // Email with validation
-            FieldMeta(
+            FieldMeta.text(
               key: 'email',
               label: 'Email',
-              type: FieldType.text,
               required: true,
               validators: [RjValidators.email()],
+              layout: const RjLayout(md: RjSpan.half),
             ),
 
-            // Password with rules
-            FieldMeta(
+            // Password with rules — standalone for security
+            FieldMeta.text(
               key: 'password',
               label: 'Password',
-              type: FieldType.text,
               required: true,
               obscureText: true,
               validators: [
@@ -194,31 +191,24 @@ class RegistrationForm extends StatelessWidget {
             ),
 
             // Date picker
-            FieldMeta(
+            FieldMeta.date(
               key: 'dob',
               label: 'Date of Birth',
-              type: FieldType.date,
               required: true,
               dateFormat: 'dd/MM/yyyy',
               validators: [RjValidators.pastDate()],
             ),
 
             // Derived field — total = price × quantity
-            FieldMeta(
-              key: 'quantity',
-              label: 'Quantity',
-              type: FieldType.number,
-              required: true,
-            ),
-            FieldMeta(
+            FieldMeta.number(key: 'quantity', label: 'Quantity', required: true),
+            FieldMeta.number(
               key: 'total_price',
               label: 'Total Price (auto)',
-              type: FieldType.number,
               derivation: FieldDerivation(
                 derivesFrom: ['quantity'],
                 compute: (state) {
                   final qty = (state['quantity'] as num?)?.toDouble() ?? 0;
-                  final basePrice = 29.99; // or fetch from another field
+                  final basePrice = 29.99;
                   return qty * basePrice;
                 },
               ),
@@ -228,10 +218,9 @@ class RegistrationForm extends StatelessWidget {
             FieldMeta.section(key: 'location', label: 'Location'),
 
             // Async dropdown (country)
-            FieldMeta(
+            FieldMeta.dropdown(
               key: 'country',
               label: 'Country',
-              type: FieldType.dropdown,
               required: true,
               dropdownSource: DropdownSource.async(
                 ({parentValue}) async => fetchCountries(),
@@ -239,10 +228,9 @@ class RegistrationForm extends StatelessWidget {
             ),
 
             // Cascading dropdown (city — depends on country)
-            FieldMeta(
+            FieldMeta.dropdown(
               key: 'city',
               label: 'City',
-              type: FieldType.dropdown,
               required: true,
               dependency: FieldDependency(dependsOn: 'country'),
               dropdownSource: DropdownSource.async(
@@ -251,10 +239,9 @@ class RegistrationForm extends StatelessWidget {
             ),
 
             // Conditional field — only shows when country == 'bd'
-            FieldMeta(
+            FieldMeta.text(
               key: 'nid_number',
               label: 'NID Number',
-              type: FieldType.text,
               dependency: FieldDependency(
                 dependsOn: 'country',
                 condition: (value) => value == 'bd',
@@ -262,24 +249,21 @@ class RegistrationForm extends StatelessWidget {
               validators: [RjValidators.digitsOnly()],
             ),
 
-            // Radio buttons
-            FieldMeta(
+            // Radio buttons + Chip — side by side on tablet
+            FieldMeta.radio(
               key: 'gender',
               label: 'Gender',
-              type: FieldType.radio,
               required: true,
               options: const [
                 DropdownItem(id: 'male', label: 'Male'),
                 DropdownItem(id: 'female', label: 'Female'),
                 DropdownItem(id: 'other', label: 'Other'),
               ],
+              layout: const RjLayout(md: RjSpan.half),
             ),
-
-            // Chip multi-select
-            FieldMeta(
+            FieldMeta.chip(
               key: 'interests',
               label: 'Interests',
-              type: FieldType.chip,
               options: const [
                 DropdownItem(id: 'tech', label: 'Technology'),
                 DropdownItem(id: 'sports', label: 'Sports'),
@@ -287,13 +271,13 @@ class RegistrationForm extends StatelessWidget {
                 DropdownItem(id: 'travel', label: 'Travel'),
               ],
               validators: [RjValidators.minSelect(1, message: 'Select at least one')],
+              layout: const RjLayout(md: RjSpan.half),
             ),
 
             // Toggle
-            FieldMeta(
+            FieldMeta.toggle(
               key: 'accept_terms',
               label: 'Accept Terms & Conditions',
-              type: FieldType.toggle,
               required: true,
             ),
           ],
@@ -351,46 +335,53 @@ class RegistrationForm extends StatelessWidget {
 
 `FieldMeta` is the blueprint for a single form field. Every field in your form is defined by one `FieldMeta` instance.
 
+Use the **typed factory constructors** to create fields — each factory surfaces only the params relevant to that field type:
+
+```dart
+FieldMeta.text(key: 'name', label: 'Name', hint: 'Enter name')
+FieldMeta.number(key: 'age', label: 'Age', required: true)
+FieldMeta.date(key: 'dob', label: 'Date of Birth', dateFormat: 'dd/MM/yyyy')
+FieldMeta.dropdown(key: 'country', label: 'Country', dropdownSource: ...)
+FieldMeta.custom(key: 'rating', label: 'Rating', builder: ...)
+// etc.
+```
+
 | Property | Type | Description |
 |----------|------|-------------|
 | `key` | `String` | **Required.** Unique identifier for the field. Used to read/write values. |
 | `label` | `String` | **Required.** Display label shown above the field. |
-| `type` | `FieldType` | **Required.** Determines which widget is rendered. |
 | `required` | `bool` | When `true`, the field must have a non-empty value to pass validation. |
 | `validators` | `List<FieldValidator>` | Additional validation functions. See [Validation](#validation). |
 | `hint` | `String?` | Placeholder text displayed inside the field. |
-| `dependency` | `FieldDependency?` | Controls visibility based on another field's value. See [Dependencies](#conditional-visibility--dependencies). |
-| `derivation` | `FieldDerivation?` | Auto-computes this field's value from other fields. See [FieldDerivation](#fieldderivation-auto-computed-fields). |
+| `dependency` | `FieldDependency?` | Controls visibility based on another field's value. |
+| `derivation` | `FieldDerivation?` | Auto-computes this field's value from other fields. |
+| `layout` | `RjLayout?` | Responsive grid span. See [Responsive Grid](#responsive-grid). |
 | `showLabel` | `bool` | When `false`, hides the field label entirely. Default `true`. |
-| `labelConfig` | `RjLabel?` | Custom label override. Use [RjLabelText] for styled text or [RjLabelCustom] for any widget. |
+| `labelConfig` | `RjLabel?` | Custom label override. Use `RjLabelText` for styled text or `RjLabelCustom` for any widget. |
 | `dropdownSource` | `DropdownSource?` | Item source for dropdown fields. Accepts static or async data. |
 | `options` | `List<DropdownItem>` | Options for radio and chip fields. |
-| `config` | `FieldConfig?` | Typed configuration (e.g., `SliderConfig`, `DateConfig`). Takes precedence over flat params. |
+| `config` | `FieldConfig?` | Typed configuration (e.g., `SliderConfig`, `DateConfig`). |
 | `viewOnly` | `bool` | When `true`, renders the field as read-only. |
 | `builder` | `CustomFieldBuilder?` | Custom widget builder for `FieldType.custom`. |
 
 **Typed config** (preferred over flat params):
 
 ```dart
-// Slider with typed config
-FieldMeta(
+FieldMeta.slider(
   key: 'volume',
   label: 'Volume',
-  type: FieldType.slider,
   config: const SliderConfig(min: 0.0, max: 100.0, divisions: 10),
-),
+)
 
-// Date with typed config
-FieldMeta(
+FieldMeta.date(
   key: 'deadline',
   label: 'Deadline',
-  type: FieldType.date,
   config: DateConfig(
     firstDate: DateTime.now(),
     lastDate: DateTime.now().add(const Duration(days: 365)),
     format: 'yyyy-MM-dd',
   ),
-),
+)
 ```
 
 ### FieldDerivation (Auto-Computed Fields)
@@ -398,10 +389,9 @@ FieldMeta(
 Fields can auto-compute their value from other fields using `FieldDerivation`. The derivation declares *which fields it derives from* and *how to compute the value*:
 
 ```dart
-FieldMeta(
+FieldMeta.number(
   key: 'total',
   label: 'Total',
-  type: FieldType.number,
   derivation: FieldDerivation(
     derivesFrom: ['price', 'quantity'],
     compute: (state) {
@@ -456,20 +446,18 @@ This is called automatically when using `RjForm(initialValues: ...)`.
 By default, every field renders its `label` text above the input. You can control or replace this with `showLabel` and `labelConfig`:
 
 ```dart
-// Hide the label entirely (showLabel: false)
-FieldMeta(
+// Hide the label entirely
+FieldMeta.text(
   key: 'no_label',
   label: 'Hidden Label',
-  type: FieldType.text,
   showLabel: false,
   hint: 'No label shown above',
 )
 
 // Styled text label via RjLabelText
-FieldMeta(
+FieldMeta.text(
   key: 'styled_label',
   label: 'Default (not shown)',
-  type: FieldType.text,
   labelConfig: const RjLabelText(
     text: 'Styled Label',
     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
@@ -477,10 +465,9 @@ FieldMeta(
 )
 
 // Custom widget label via RjLabelCustom
-FieldMeta(
+FieldMeta.number(
   key: 'custom_label',
   label: 'Default (not shown)',
-  type: FieldType.number,
   labelConfig: RjLabelCustom((context) {
     return Row(
       children: [
@@ -498,6 +485,85 @@ FieldMeta(
 - `labelConfig` — when set and `showLabel` is `true`, the default label is suppressed and the custom `RjLabel` widget is rendered above the input field.
 - `RjLabelText` provides full text styling (`style`, `textAlign`, `maxLines`, `overflow`, `padding`).
 - `RjLabelCustom` accepts a `WidgetBuilder` for any custom widget.
+
+### Responsive Grid
+
+Fields can be laid out side-by-side on tablet and desktop screens using `RjLayout` and `RjSpan`. On phones (below 768px), all fields automatically stack full-width — no configuration needed.
+
+```dart
+FieldMeta.text(
+  key: 'first_name',
+  label: 'First Name',
+  required: true,
+  layout: const RjLayout(md: RjSpan.half),
+)
+```
+
+**How it works:**
+
+- The engine uses a mobile-first **12-column grid**. Each field declares how many columns it occupies via `RjSpan`.
+- Consecutive fields are auto-grouped into rows. When a field would exceed 12 columns, it wraps to the next row.
+- Sections (`FieldMeta.section`) automatically break the current row and start fresh.
+- Fields without a `layout` default to full width (12 columns) — backward compatible.
+
+**RjSpan values:**
+
+| Span | Columns | Typical layout |
+|------|---------|----------------|
+| `RjSpan.full` | 12 | 1 per row (default) |
+| `RjSpan.half` | 6 | 2 per row |
+| `RjSpan.third` | 4 | 3 per row |
+| `RjSpan.quarter` | 3 | 4 per row |
+
+**Breakpoint behavior:**
+
+| Screen | Width | Behavior |
+|--------|-------|----------|
+| Phone | <768px | All fields forced to 12 cols (full-width) |
+| Tablet | ≥768px | Respects `md` span |
+| Desktop | ≥1024px | Uses `lg` if provided, otherwise falls back to `md` |
+
+**Desktop override:**
+
+```dart
+FieldMeta.text(
+  key: 'description',
+  label: 'Description',
+  layout: const RjLayout(md: RjSpan.half, lg: RjSpan.third),
+)
+```
+
+**Typical ERP form (side-by-side layout):**
+
+```dart
+RjForm(
+  fields: [
+    FieldMeta.section(key: 'employee', label: 'Employee Details'),
+    FieldMeta.text(key: 'first_name', label: 'First Name',
+      layout: const RjLayout(md: RjSpan.half)),
+    FieldMeta.text(key: 'last_name', label: 'Last Name',
+      layout: const RjLayout(md: RjSpan.half)),
+    FieldMeta.text(key: 'email', label: 'Email',
+      layout: const RjLayout(md: RjSpan.half)),
+    FieldMeta.number(key: 'phone', label: 'Phone',
+      layout: const RjLayout(md: RjSpan.half)),
+    FieldMeta.dropdown(key: 'department', label: 'Department',
+      dropdownSource: DropdownSource.static(departments),
+      layout: const RjLayout(md: RjSpan.half)),
+    FieldMeta.dropdown(key: 'position', label: 'Position',
+      dropdownSource: DropdownSource.static(positions),
+      layout: const RjLayout(md: RjSpan.half)),
+    FieldMeta.section(key: 'comp', label: 'Compensation'),
+    FieldMeta.number(key: 'salary', label: 'Base Salary',
+      layout: const RjLayout(md: RjSpan.half)),
+    FieldMeta.slider(key: 'bonus', label: 'Bonus %',
+      sliderMin: 0, sliderMax: 100, sliderDivisions: 100,
+      layout: const RjLayout(md: RjSpan.half)),
+  ],
+)
+```
+
+> On a phone, every field stacks vertically — perfectly readable. On a tablet or desktop, `first_name` + `last_name`, `email` + `phone`, `department` + `position`, and `salary` + `bonus` line up side by side automatically.
 
 ### FormController
 
@@ -547,10 +613,9 @@ Validation happens in two layers:
 Each validator returns `String?` — an error message if invalid, or `null` if valid.
 
 ```dart
-FieldMeta(
+FieldMeta.text(
   key: 'password',
   label: 'Password',
-  type: FieldType.text,
   required: true,
   validators: [
     RjValidators.minLength(8),
@@ -596,10 +661,9 @@ Fields can be shown or hidden based on other field values using `FieldDependency
 
 ```dart
 // Show only when 'reason' equals 'other'
-FieldMeta(
+FieldMeta.textArea(
   key: 'other_reason',
   label: 'Please specify',
-  type: FieldType.textArea,
   dependency: FieldDependency(
     dependsOn: 'reason',
     condition: (value) => value == 'other',
@@ -610,10 +674,9 @@ FieldMeta(
 **Cascading dropdowns** use the same mechanism. When the parent dropdown changes, the child automatically reloads its items and clears its current value:
 
 ```dart
-FieldMeta(
+FieldMeta.dropdown(
   key: 'city',
   label: 'City',
-  type: FieldType.dropdown,
   dependency: FieldDependency(dependsOn: 'country'),
   dropdownSource: DropdownSource.async(
     ({parentValue}) async => fetchCities(parentValue: parentValue),
@@ -767,12 +830,11 @@ RjForm(
 ```dart
 RjForm(
   fields: [
-    FieldMeta(key: 'price',    label: 'Price',    type: FieldType.number, required: true),
-    FieldMeta(key: 'quantity', label: 'Quantity', type: FieldType.number, required: true),
-    FieldMeta(
+    FieldMeta.number(key: 'price', label: 'Price', required: true),
+    FieldMeta.number(key: 'quantity', label: 'Quantity', required: true),
+    FieldMeta.number(
       key: 'total',
       label: 'Total (auto)',
-      type: FieldType.number,
       derivation: FieldDerivation(
         derivesFrom: ['price', 'quantity'],
         compute: (state) {
@@ -864,7 +926,6 @@ flutter run
 
 - **Image picker supports gallery only.** Camera capture is not currently supported. For camera or file picker functionality, use a custom field via `FieldMeta.custom`.
 - **No built-in form state persistence.** Form data is lost if the app is killed in the background. Implement your own persistence layer if needed.
-- **Single-column layout.** Fields render vertically. Multi-column or grid layouts require custom field builders.
 - **No i18n built-in.** Labels, hints, and error messages are plain strings. You must handle localization yourself (e.g., via `AppLocalizations.of(context)`).
 - **`FormResult.get<T>()` returns `null` on type mismatch.** If you request `result.get<int>('age')` but the stored value is a `String`, you get `null` silently. Always use the correct type.
 
@@ -873,8 +934,9 @@ flutter run
 ## Roadmap
 
 - [x] Auto-derived / computed fields with dependency tracking
+- [x] Typed factory constructors for all field types
+- [x] Responsive multi-column grid layout (mobile-first, auto row-packing)
 - [ ] Camera support for image fields
-- [ ] Multi-column / grid layout support
 - [ ] Built-in i18n / localization
 - [ ] Form state persistence (auto-save / restore)
 - [ ] File upload field (non-image)

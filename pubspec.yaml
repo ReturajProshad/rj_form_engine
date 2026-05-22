@@ -1,13 +1,13 @@
 name: rj_form_engine
 description: >-
   Schema-driven dynamic form engine for Flutter with validation, rich field types, and minimal dependencies.
-version: 0.3.0
+version: 1.0.0
 homepage: https://github.com/ReturajProshad/rj_form_engine
 repository: https://github.com/ReturajProshad/rj_form_engine
 issue_tracker: https://github.com/ReturajProshad/rj_form_engine/issues
 
 topics:
-  - forms
+  - form-field
   - form-builder
   - dynamic-forms
   - validation

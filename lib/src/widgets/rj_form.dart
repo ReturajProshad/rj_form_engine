@@ -17,7 +17,7 @@ import 'fields/image_field.dart';
 import 'fields/extra_fields.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. _FormScope — InheritedWidget to propagate controller without rebuilding
+// _FormScope — InheritedWidget to propagate controller without rebuilding
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _FormScope extends InheritedWidget {
@@ -53,6 +53,7 @@ class _FormScope extends InheritedWidget {
 class _FieldBuilder extends StatefulWidget {
   final FieldMeta field;
   final double width;
+  final double flex; // proportion of row width (0.0-1.0)
   final void Function(String key, dynamic value) setValue;
   final void Function(
     String key,
@@ -65,6 +66,7 @@ class _FieldBuilder extends StatefulWidget {
   const _FieldBuilder({
     required this.field,
     required this.width,
+    this.flex = 1.0,
     required this.setValue,
     required this.setValueCascade,
     required this.setError,
@@ -712,23 +714,83 @@ class _RjFormState extends State<RjForm> {
 
   List<Widget> _buildFieldList(double width) {
     final widgets = <Widget>[];
+    final currentRow = <(FieldMeta field, int span)>[];
+    int currentRowCols = 0;
+    const maxCols = 12;
+
+    void flushRow() {
+      if (currentRow.isEmpty) return;
+
+      if (currentRow.length == 1 && currentRow.first.$2 == maxCols) {
+        // Single full-width field — no need for Row
+        final (field, _) = currentRow.first;
+        widgets.add(
+          _FieldBuilder(
+            key: ValueKey(field.key),
+            field: field,
+            width: width,
+            flex: 1,
+            setValue: _setValue,
+            setValueCascade: _setValueCascade,
+            setError: _controller.setError,
+          ),
+        );
+      } else {
+        // Multi-field row
+        final rowChildren = <Widget>[];
+        for (int i = 0; i < currentRow.length; i++) {
+          final (field, span) = currentRow[i];
+          rowChildren.add(
+            Expanded(
+              flex: span,
+              child: _FieldBuilder(
+                key: ValueKey(field.key),
+                field: field,
+                width: width,
+                flex: span / maxCols,
+                setValue: _setValue,
+                setValueCascade: _setValueCascade,
+                setError: _controller.setError,
+              ),
+            ),
+          );
+
+          // Add horizontal gap between fields (but not after last field)
+          if (i < currentRow.length - 1) {
+            rowChildren.add(SizedBox(width: RjResponsive.fieldSpacing(width)));
+          }
+        }
+
+        widgets.add(
+          IntrinsicHeight(
+            child: Row(children: rowChildren),
+          ),
+        );
+      }
+
+      currentRow.clear();
+      currentRowCols = 0;
+    }
+
     for (final field in widget.fields) {
       if (field.type == FieldType.section) {
+        flushRow();
         widgets.add(_buildSection(field, width));
         continue;
       }
 
-      widgets.add(
-        _FieldBuilder(
-          key: ValueKey(field.key),
-          field: field,
-          width: width,
-          setValue: _setValue,
-          setValueCascade: _setValueCascade,
-          setError: _controller.setError,
-        ),
-      );
+      final span = RjResponsive.resolveSpan(field.layout, width);
+
+      // Check if adding this field would overflow the row
+      if (currentRowCols + span > maxCols && currentRow.isNotEmpty) {
+        flushRow();
+      }
+
+      currentRow.add((field, span));
+      currentRowCols += span;
     }
+
+    flushRow();
     return widgets;
   }
 

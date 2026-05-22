@@ -1,3 +1,60 @@
+## 1.0.0
+
+> Stable release — typed factory constructors, responsive grid layout, enhanced DX, and zero breaking changes.
+
+### Added
+
+#### Typed Factory Constructors
+
+- **13 factory constructors** on `FieldMeta`: `.text()`, `.number()`, `.textArea()`, `.date()`, `.dropdown()`, `.image()`, `.slider()`, `.spinner()`, `.timePicker()`, `.toggle()`, `.radio()`, `.chip()`, `.custom()`
+- Each factory surfaces **only the params relevant to that field type** — no more `spinnerMin` on a text field
+- `FieldMeta.custom()` enhanced — now accepts `hint`, `derivation`, `showLabel`, `labelConfig`
+- Old `FieldMeta(key: ..., type: ..., ...)` constructor is **unchanged** — zero breaking changes
+
+```dart
+// Before
+FieldMeta(key: 'email', label: 'Email', type: FieldType.text, required: true)
+
+// After
+FieldMeta.text(key: 'email', label: 'Email', required: true)
+```
+
+#### Responsive Grid Layout
+
+- **`RjSpan` enum** — `full`, `half`, `third`, `quarter` for declaring field widths
+- **`RjLayout` class** — configurable per-field layout with `md` (tablet) and optional `lg` (desktop)
+- **Row-packing grid engine** — consecutive fields auto-group into `IntrinsicHeight` rows based on their span
+- **Mobile-first** — phone (below 768px) always stacks full-width automatically; no config needed
+- **Section-aware** — sections flush the current row and start fresh
+- `RjResponsive.resolveSpan()` — resolves the effective column count from layout + screen width
+- `RjLayout? layout` property on all factory constructors and `copyWith`
+
+```dart
+FieldMeta.text(
+  key: 'email',
+  label: 'Email',
+  required: true,
+  layout: const RjLayout(md: RjSpan.half), // side-by-side on tablet+
+)
+```
+
+#### Other
+
+- `hint` parameter added to `FieldMeta.radio()` and `FieldMeta.chip()` factories
+
+### Changed
+
+- Version bumped to **1.0.0** — stable API surface with all core features production-ready
+
+### Documentation
+
+- README fully rewritten: all examples use typed factory constructors
+- New "Responsive Grid" section with `RjSpan`/`RjLayout` API docs
+- Updated Limitations — multi-column grid is now natively supported
+- Updated Roadmap — grid layout and typed factories marked complete
+
+---
+
 ## 0.3.0
 
 > Auto-derivation release — computed fields, label shadowing, chained derivations, and label customization.
@@ -49,7 +106,7 @@ FieldDerivation(
     final cat  = state['categoryLabel'] ?? '';
     final item = state['itemLabel'] ?? '';
   return [cat, item].where((p) => p.isNotEmpty).join(' - ');
-}
+})
 ```
 
 ### Added (Label Customization)
@@ -93,10 +150,13 @@ FieldMeta(
 ```
 
 ---
+
 ## 0.2.1
 
 - Added toggle obscure functionality to show/hide text in password fields.
+
 ---
+
 ## 0.2.0
 
 > Refactor release — improved API consistency, performance, and type safety.

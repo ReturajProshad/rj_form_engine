@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/field_meta.dart';
 
 /// Responsive breakpoint thresholds.
 class RjBreakpoints {
@@ -163,5 +164,29 @@ class RjResponsive {
     if (width >= RjBreakpoints.desktop) return 20;
     if (width >= RjBreakpoints.tablet) return 19;
     return 18;
+  }
+
+  /// Resolve column span for a field in the 12-column grid layout.
+  /// Mobile (phone) always returns 12 (full-width).
+  /// Tablet/desktop use the layout config.
+  ///
+  /// Returns: 12 (full), 6 (half), 4 (third), or 3 (quarter)
+  static int resolveSpan(RjLayout? layout, double width) {
+    final size = screenSize(width);
+
+    if (layout == null) return 12; // backward compat = full width
+
+    // Mobile is always full-width
+    if (size == RjScreenSize.phone) return 12;
+
+    // Tablet/desktop: resolve based on layout config
+    final span = size == RjScreenSize.desktop ? layout.lg ?? layout.md : layout.md;
+
+    return switch (span) {
+      RjSpan.half => 6,
+      RjSpan.third => 4,
+      RjSpan.quarter => 3,
+      RjSpan.full => 12,
+    };
   }
 }

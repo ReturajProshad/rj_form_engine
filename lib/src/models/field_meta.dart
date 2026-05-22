@@ -62,6 +62,42 @@ enum FieldType {
   section,
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Responsive Grid Layout
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Column span for a field in the responsive grid.
+/// Maps to 12-column layout: full=12, half=6, third=4, quarter=3.
+enum RjSpan {
+  full,    // 100% width (12/12 cols)
+  half,    // 50% width (6/12 cols)
+  third,   // 33% width (4/12 cols)
+  quarter, // 25% width (3/12 cols)
+}
+
+/// Responsive layout configuration for a field.
+///
+/// Mobile-first approach: phone always renders full-width (ignores config).
+/// [md] controls tablet width (≥768px), [lg] controls desktop (≥1024px).
+/// If [lg] is null, desktop falls back to [md].
+///
+/// Example:
+/// ```dart
+/// RjLayout(
+///   md: RjSpan.half,      // tablet: 50% width
+///   lg: RjSpan.third,     // desktop: 33% width
+/// )
+/// ```
+class RjLayout {
+  final RjSpan md;
+  final RjSpan? lg;
+
+  const RjLayout({
+    this.md = RjSpan.full,
+    this.lg,
+  });
+}
+
 typedef FieldValidator = String? Function(dynamic value);
 
 // FIX D: CustomFieldBuilder now receives FieldMeta so the builder has access
@@ -262,6 +298,11 @@ class FieldMeta {
   /// widget via [RjLabelCustom].
   final RjLabel? labelConfig;
 
+  /// Responsive grid layout configuration.
+  /// When null, field spans full width (default backward-compatible behavior).
+  /// Mobile (phone) always renders full-width regardless of this config.
+  final RjLayout? layout;
+
   final bool viewOnly;
   final String? hint;
   final CustomFieldBuilder? builder;
@@ -300,6 +341,7 @@ class FieldMeta {
     this.derivation,
     this.showLabel = true,
     this.labelConfig,
+    this.layout,
     this.viewOnly = false,
     this.hint,
     this.builder,
@@ -347,6 +389,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
     bool obscureText = false,
     bool toggleObscure = false,
@@ -363,6 +406,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           obscureText: obscureText,
           toggleObscure: toggleObscure,
@@ -380,6 +424,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
   }) : this(
           key: key,
@@ -392,6 +437,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
         );
 
@@ -405,6 +451,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
     int maxLines = 4,
     TextConfig? config,
@@ -419,6 +466,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           maxLines: maxLines,
           config: config,
@@ -434,6 +482,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
     DateTime? firstDate,
     DateTime? lastDate,
@@ -450,6 +499,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           firstDate: firstDate,
           lastDate: lastDate,
@@ -467,6 +517,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
     DropdownSource? dropdownSource,
   }) : this(
@@ -480,6 +531,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           dropdownSource: dropdownSource,
         );
@@ -494,6 +546,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
     int maxImages = 1,
     int maxImageSizeBytes = 2 * 1024 * 1024,
@@ -509,6 +562,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           maxImages: maxImages,
           maxImageSizeBytes: maxImageSizeBytes,
@@ -524,6 +578,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
     double sliderMin = 0.0,
     double sliderMax = 100.0,
@@ -540,6 +595,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           sliderMin: sliderMin,
           sliderMax: sliderMax,
@@ -557,6 +613,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
     int spinnerMin = 0,
     int spinnerMax = 999,
@@ -572,6 +629,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           spinnerMin: spinnerMin,
           spinnerMax: spinnerMax,
@@ -589,6 +647,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
     String? timeFormat,
     TimeConfig? config,
@@ -603,6 +662,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           timeFormat: timeFormat,
           config: config,
@@ -618,6 +678,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
   }) : this(
           key: key,
@@ -630,6 +691,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
         );
 
@@ -638,23 +700,27 @@ class FieldMeta {
     required String label,
     required List<DropdownItem> options,
     bool required = false,
+    String? hint,
     List<FieldValidator> validators = const [],
     FieldDependency? dependency,
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
   }) : this(
           key: key,
           label: label,
           type: FieldType.radio,
           required: required,
+          hint: hint,
           options: options,
           validators: validators,
           dependency: dependency,
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
         );
 
@@ -663,23 +729,27 @@ class FieldMeta {
     required String label,
     required List<DropdownItem> options,
     bool required = false,
+    String? hint,
     List<FieldValidator> validators = const [],
     FieldDependency? dependency,
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
   }) : this(
           key: key,
           label: label,
           type: FieldType.chip,
           required: required,
+          hint: hint,
           options: options,
           validators: validators,
           dependency: dependency,
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
         );
 
@@ -694,6 +764,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool showLabel = true,
     RjLabel? labelConfig,
+    RjLayout? layout,
     bool viewOnly = false,
   }) : this(
           key: key,
@@ -706,6 +777,7 @@ class FieldMeta {
           derivation: derivation,
           showLabel: showLabel,
           labelConfig: labelConfig,
+          layout: layout,
           viewOnly: viewOnly,
           builder: builder,
         );
@@ -783,6 +855,7 @@ class FieldMeta {
     FieldDerivation? derivation,
     bool? showLabel,
     RjLabel? labelConfig,
+    RjLayout? layout,
   }) {
     return FieldMeta(
       key: key,
@@ -795,6 +868,7 @@ class FieldMeta {
       derivation: derivation ?? this.derivation,
       showLabel: showLabel ?? this.showLabel,
       labelConfig: labelConfig ?? this.labelConfig,
+      layout: layout ?? this.layout,
       viewOnly: viewOnly ?? this.viewOnly,
       hint: hint ?? this.hint,
       builder: builder,
