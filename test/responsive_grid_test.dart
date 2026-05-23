@@ -146,6 +146,15 @@ void main() {
         ).layout,
         isNotNull,
       );
+
+      expect(
+        FieldMeta.searchableDropdown(
+          key: 'skill',
+          label: 'Skill',
+          layout: RjLayout(md: RjSpan.half),
+        ).layout,
+        isNotNull,
+      );
     });
 
     test('copyWith preserves layout', () {

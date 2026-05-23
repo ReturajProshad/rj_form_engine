@@ -50,6 +50,7 @@ enum FieldType {
   number,
   date,
   dropdown,
+  searchableDropdown,
   image,
   textArea,
   custom,
@@ -69,9 +70,9 @@ enum FieldType {
 /// Column span for a field in the responsive grid.
 /// Maps to 12-column layout: full=12, half=6, third=4, quarter=3.
 enum RjSpan {
-  full,    // 100% width (12/12 cols)
-  half,    // 50% width (6/12 cols)
-  third,   // 33% width (4/12 cols)
+  full, // 100% width (12/12 cols)
+  half, // 50% width (6/12 cols)
+  third, // 33% width (4/12 cols)
   quarter, // 25% width (3/12 cols)
 }
 
@@ -199,6 +200,21 @@ class TimeConfig extends FieldConfig {
   final String? format; // e.g. 'HH:mm'
 
   const TimeConfig({this.format});
+}
+
+/// Config for FieldType.searchableDropdown
+class SearchableDropdownConfig extends FieldConfig {
+  final String hintText;
+  final double maxHeight;
+  final double offsetY;
+  final double offsetX;
+
+  const SearchableDropdownConfig({
+    this.hintText = 'Select or type',
+    this.maxHeight = 200,
+    this.offsetY = 6,
+    this.offsetX = 0,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -536,6 +552,37 @@ class FieldMeta {
           dropdownSource: dropdownSource,
         );
 
+  const FieldMeta.searchableDropdown({
+    required String key,
+    required String label,
+    bool required = false,
+    String? hint,
+    List<FieldValidator> validators = const [],
+    FieldDependency? dependency,
+    FieldDerivation? derivation,
+    bool showLabel = true,
+    RjLabel? labelConfig,
+    RjLayout? layout,
+    bool viewOnly = false,
+    DropdownSource? dropdownSource,
+    SearchableDropdownConfig? config,
+  }) : this(
+          key: key,
+          label: label,
+          type: FieldType.searchableDropdown,
+          required: required,
+          hint: hint,
+          validators: validators,
+          dependency: dependency,
+          derivation: derivation,
+          showLabel: showLabel,
+          labelConfig: labelConfig,
+          layout: layout,
+          viewOnly: viewOnly,
+          dropdownSource: dropdownSource,
+          config: config,
+        );
+
   const FieldMeta.image({
     required String key,
     required String label,
@@ -794,7 +841,9 @@ class FieldMeta {
       'FieldMeta.section: provide an explicit `key` for "$label".',
     );
 
-    final resolvedKey = (key != null && key.isNotEmpty) ? key : 'section_${++_sectionKeyCounter}_${label.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
+    final resolvedKey = (key != null && key.isNotEmpty)
+        ? key
+        : 'section_${++_sectionKeyCounter}_${label.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
 
     return FieldMeta(
       key: resolvedKey,
@@ -816,7 +865,9 @@ class FieldMeta {
           labelBuilder: sliderLabelBuilder,
         );
 
-  SpinnerConfig get spinnerConfig => config is SpinnerConfig ? config as SpinnerConfig : SpinnerConfig(min: spinnerMin, max: spinnerMax, step: spinnerStep);
+  SpinnerConfig get spinnerConfig => config is SpinnerConfig
+      ? config as SpinnerConfig
+      : SpinnerConfig(min: spinnerMin, max: spinnerMax, step: spinnerStep);
 
   ImageConfig get imageConfig => config is ImageConfig
       ? config as ImageConfig
@@ -841,7 +892,14 @@ class FieldMeta {
           maxLines: maxLines,
         );
 
-  TimeConfig get timeConfig => config is TimeConfig ? config as TimeConfig : TimeConfig(format: timeFormat);
+  TimeConfig get timeConfig => config is TimeConfig
+      ? config as TimeConfig
+      : TimeConfig(format: timeFormat);
+
+  SearchableDropdownConfig get searchableDropdownConfig =>
+      config is SearchableDropdownConfig
+          ? config as SearchableDropdownConfig
+          : const SearchableDropdownConfig();
 
   FieldMeta copyWith({
     bool? viewOnly,

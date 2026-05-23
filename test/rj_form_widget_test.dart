@@ -21,6 +21,14 @@ final _staticDropdown = FieldMeta.dropdown(
     DropdownItem(id: 'inactive', label: 'Inactive'),
   ]),
 );
+final _searchableDropdown = FieldMeta.searchableDropdown(
+  key: 'skill',
+  label: 'Skill',
+  dropdownSource: DropdownSource.static([
+    DropdownItem(id: 'flutter', label: 'Flutter'),
+    DropdownItem(id: 'react', label: 'React'),
+  ]),
+);
 
 void main() {
   group('RjForm widget', () {
@@ -148,6 +156,19 @@ void main() {
 
       expect(find.text('Active'), findsWidgets);
       expect(find.text('Inactive'), findsOneWidget);
+    });
+
+    testWidgets('renders searchable dropdown with label', (tester) async {
+      await tester.pumpWidget(_wrap(
+        RjForm(
+          fields: [_searchableDropdown],
+          onSubmit: (_) async {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Skill'), findsOneWidget);
+      expect(find.byType(TextFormField), findsOneWidget);
     });
 
     testWidgets('hidden field is not rendered', (tester) async {

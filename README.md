@@ -45,7 +45,7 @@ RjForm(
 - **Auto-derivation** — fields that auto-compute their value from other fields (e.g., `total = price × quantity`)
 - **Label shadowing** — dropdown labels are stored alongside IDs, giving `compute` functions instant access to human-readable text
 - **Chained derivations** — A → B → C cascades update in a single pass
-- **13 field types** — text, number, date, dropdown, textarea, image upload, slider, time picker, spinner, toggle, radio, chip multi-select, custom
+- **14 field types** — text, number, date, dropdown, **searchable dropdown**, textarea, image upload, slider, time picker, spinner, toggle, radio, chip multi-select, custom
 - **Custom fields** — inject any widget via `FieldMeta.custom`
 - **Cascading dropdowns** — parent/child dependency with auto-reload and auto-clear
 - **Async dropdown loading** — load items from APIs, databases, or caches
@@ -98,7 +98,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rj_form_engine: ^1.0.0
+  rj_form_engine: ^1.0.1
 ```
 
 Then run:
@@ -253,6 +253,24 @@ class RegistrationForm extends StatelessWidget {
               validators: [RjValidators.digitsOnly()],
             ),
 
+            // Searchable dropdown — filter-as-you-type
+            FieldMeta.searchableDropdown(
+              key: 'skill',
+              label: 'Primary Skill',
+              required: true,
+              dropdownSource: DropdownSource.static([
+                DropdownItem(id: 'flutter', label: 'Flutter / Dart'),
+                DropdownItem(id: 'react', label: 'React / Next.js'),
+                DropdownItem(id: 'python', label: 'Python / Django'),
+                DropdownItem(id: 'go', label: 'Go / Gin'),
+                DropdownItem(id: 'rust', label: 'Rust / Actix'),
+              ]),
+              config: const SearchableDropdownConfig(
+                hintText: 'Search skills...',
+              ),
+              layout: const RjLayout(md: RjSpan.half),
+            ),
+
             // Radio buttons + Chip — side by side on tablet
             FieldMeta.radio(
               key: 'gender',
@@ -346,6 +364,7 @@ FieldMeta.text(key: 'name', label: 'Name', hint: 'Enter name')
 FieldMeta.number(key: 'age', label: 'Age', required: true)
 FieldMeta.date(key: 'dob', label: 'Date of Birth', dateFormat: 'dd/MM/yyyy')
 FieldMeta.dropdown(key: 'country', label: 'Country', dropdownSource: ...)
+FieldMeta.searchableDropdown(key: 'city', label: 'City', dropdownSource: ...)
 FieldMeta.custom(key: 'rating', label: 'Rating', builder: ...)
 // etc.
 ```
@@ -386,7 +405,26 @@ FieldMeta.date(
     format: 'yyyy-MM-dd',
   ),
 )
+
+FieldMeta.searchableDropdown(
+  key: 'skill',
+  label: 'Primary Skill',
+  dropdownSource: DropdownSource.static(skills),
+  config: const SearchableDropdownConfig(
+    hintText: 'Search skills...',
+    maxHeight: 250,
+  ),
+)
 ```
+
+**`SearchableDropdownConfig` properties:**
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `hintText` | `String` | `'Select or type'` | Placeholder text in the search input |
+| `maxHeight` | `double` | `200` | Maximum height of the dropdown overlay |
+| `offsetY` | `double` | `6` | Vertical offset from the field to the dropdown |
+| `offsetX` | `double` | `0` | Horizontal offset from the field to the dropdown |
 
 ### FieldDerivation (Auto-Computed Fields)
 
@@ -728,6 +766,7 @@ FieldMeta.custom(
 | `FieldType.number` | `RjNumberField` | `num?` | Age, price, quantity |
 | `FieldType.date` | `RjDateField` | `DateTime` | Birth dates, deadlines |
 | `FieldType.dropdown` | `RjDropdownField` | `String?` (item id) | Country, category, status |
+| `FieldType.searchableDropdown` | `RjSearchableDropdownField` | `String?` (item id) | Country, category — filter by typing |
 | `FieldType.textArea` | `RjTextField` | `String` | Descriptions, comments |
 | `FieldType.image` | `RjImageField` | `List<String>` (file paths) | Photo uploads |
 | `FieldType.slider` | `RjSliderField` | `double` | Volume, rating, range |

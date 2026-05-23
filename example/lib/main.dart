@@ -119,6 +119,24 @@ final _fields = [
     ]),
   ),
 
+  // ── Searchable dropdown ──
+  FieldMeta.searchableDropdown(
+    key: 'preferred_framework',
+    label: 'Preferred Framework',
+    required: true,
+    dropdownSource: DropdownSource.static([
+      const DropdownItem(id: 'flutter', label: 'Flutter / Dart'),
+      const DropdownItem(id: 'react', label: 'React / Next.js'),
+      const DropdownItem(id: 'vue', label: 'Vue / Nuxt'),
+      const DropdownItem(id: 'angular', label: 'Angular'),
+      const DropdownItem(id: 'svelte', label: 'Svelte / SvelteKit'),
+      const DropdownItem(id: 'solid', label: 'Solid.js'),
+    ]),
+    config: const SearchableDropdownConfig(
+      hintText: 'Type to search frameworks...',
+    ),
+  ),
+
   // ── Radio ──
   const FieldMeta.radio(
     key: 'gender',

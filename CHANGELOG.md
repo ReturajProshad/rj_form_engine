@@ -1,3 +1,31 @@
+## 1.0.1
+
+> Searchable dropdown field — filter-as-you-type dropdown with custom overlay positioning.
+
+### Added
+
+- **`FieldType.searchableDropdown`** — new field type for searchable/filterable dropdowns
+- **`FieldMeta.searchableDropdown()`** — typed factory constructor for the new field type
+- **`SearchableDropdownConfig`** — typed config class supporting `hintText`, `maxHeight`, `offsetY`, `offsetX` for overlay customization
+- **`RjSearchableDropdownField`** — widget that renders a `TextFormField` with an overlay list that filters items as the user types
+- **`FieldMeta.searchableDropdownConfig`** accessor — fallback to defaults when no config provided
+- `FieldType.searchableDropdown` case in `rj_form.dart` switch, wired with label shadowing (same as regular dropdown)
+
+```dart
+FieldMeta.searchableDropdown(
+  key: 'country',
+  label: 'Country',
+  required: true,
+  dropdownSource: DropdownSource.async(fetchCountries),
+  config: const SearchableDropdownConfig(
+    hintText: 'Search country...',
+    maxHeight: 300,
+  ),
+)
+```
+
+---
+
 ## 1.0.0
 
 > Stable release — typed factory constructors, responsive grid layout, enhanced DX, and zero breaking changes.

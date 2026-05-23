@@ -13,6 +13,7 @@ import '../utils/rj_responsive.dart';
 import 'fields/text_fields.dart';
 import 'fields/date_field.dart';
 import 'fields/dropdown_field.dart';
+import 'fields/searchable_dropdown_field.dart';
 import 'fields/image_field.dart';
 import 'fields/extra_fields.dart';
 
@@ -154,9 +155,10 @@ class _FieldBuilderState extends State<_FieldBuilder> {
     final effectiveField = isViewOnly ? field.copyWith(viewOnly: true) : field;
     // When labelConfig is set, suppress default label in the field widget
     // so the custom label (rendered above) doesn't conflict.
-    final fieldForWidget = effectiveField.labelConfig != null && effectiveField.showLabel
-        ? effectiveField.copyWith(showLabel: false)
-        : effectiveField;
+    final fieldForWidget =
+        effectiveField.labelConfig != null && effectiveField.showLabel
+            ? effectiveField.copyWith(showLabel: false)
+            : effectiveField;
     final absorbing = effectiveField.viewOnly || isDerived;
 
     Widget fieldWidget = _buildFieldWidget(fieldForWidget, scope);
@@ -254,6 +256,26 @@ class _FieldBuilderState extends State<_FieldBuilder> {
 
       case FieldType.dropdown:
         return RjDropdownField(
+          field: field,
+          value: value?.toString(),
+          parentValue: _lastParentValue,
+          errorText: error,
+          theme: theme,
+          onChanged: (v, {label}) {
+            final extra = <String, dynamic>{};
+            if (label != null) extra['${field.key}Label'] = label;
+            widget.setValueCascade(
+              field.key,
+              v,
+              scope.fields,
+              extraValues: extra,
+            );
+          },
+          width: width,
+        );
+
+      case FieldType.searchableDropdown:
+        return RjSearchableDropdownField(
           field: field,
           value: value?.toString(),
           parentValue: _lastParentValue,
