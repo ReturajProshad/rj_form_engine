@@ -1,3 +1,48 @@
+## 1.1.0
+
+> Repeatable groups — add/remove rows of sub-fields at runtime (invoice line items, family members, …) with per-row derivations and grand-total roll-ups.
+
+### Added
+
+- **`FieldType.group`** and **`FieldMeta.group()`** — renders a block of sub-fields once per row, with add/remove controls. The value is a `List<Map<String, dynamic>>` under the group's `key`.
+- **`GroupConfig`** — `addButtonLabel`, `removeButtonLabel`, `minRows` (default `1`), `maxRows` (default unlimited), `showRemoveButton`.
+- **Per-row derivations** — row fields compute from a merged `{...root, ...row}` scope, so they can read both their own row and root fields.
+- **Roll-up derivations** — root fields can derive from the group key (e.g. a grand total), recomputed when a row value changes or a row is added/removed.
+- **Cascading dropdowns inside rows** — dependents are cleared per row; label shadowing works as at root.
+- **Group validation** — sub-field `required`/`validators` run per row. Group-level `required: true` means at least one row with a user-entered value (derived fields don't count); group-level `validators` receive the clean row list. Hidden groups (`dependency`) are skipped.
+- **Stable row identity** — each row carries an internal `__rowId` (stripped from `values` and `FormResult`). Row errors use composite keys `'<groupKey>.<rowId>.<subKey>'`, so errors stay on the right row when a row in the middle is removed.
+- **`RjErrorKey.tryParse()`** — decodes composite row-error keys, e.g. inside a custom `errorsSummaryBuilder`.
+- Default error summary shows group errors as `• <Group> — Row N: <message>`.
+- Groups use the shared responsive grid, so sub-fields accept `RjLayout`/`RjSpan`.
+- `initialValues` / `setAll()` with group data: rows are normalized and missing row ids injected automatically.
+
+### Changed
+
+- Field rendering consolidated into a single internal `buildFieldWidget` used by both root fields and group rows (no public API change).
+- `FormController.clear()` / `autoClearOnSubmit` re-seed `minRows` blank rows for mounted groups instead of leaving a group empty.
+- `FormController.isDirty` ignores the untouched blank rows the engine seeds for `minRows`.
+- `FormController.ensureGroupRows()` now returns `bool` (whether rows changed). Existing calls are unaffected.
+
+### Known limitations
+
+- Groups are single-level (no nested groups or section headers inside rows).
+- No cross-row validation, row reordering or virtualization yet.
+
+```dart
+FieldMeta.group(
+  key: 'items',
+  label: 'Line Items',
+  fields: [
+    FieldMeta.text(key: 'name', label: 'Item', required: true),
+    FieldMeta.number(key: 'qty', label: 'Qty'),
+    FieldMeta.number(key: 'rate', label: 'Rate'),
+  ],
+  config: const GroupConfig(addButtonLabel: 'Add Line Item', maxRows: 10),
+)
+```
+
+---
+
 ## 1.0.1
 
 > Searchable dropdown field — filter-as-you-type dropdown with custom overlay positioning.

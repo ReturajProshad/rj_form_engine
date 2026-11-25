@@ -99,7 +99,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rj_form_engine: ^1.0.1
+  rj_form_engine: ^1.1.0
 ```
 
 Then run:

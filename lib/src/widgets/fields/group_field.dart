@@ -234,15 +234,19 @@ class _RjGroupFieldState extends State<RjGroupField> {
               ),
               const Spacer(),
               if (showRemove)
-                InkWell(
-                  onTap: () => _removeRow(rowId),
-                  borderRadius: BorderRadius.circular(4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(
-                      Icons.close_rounded,
-                      size: 18,
-                      color: theme.errorColor,
+                Tooltip(
+                  message: cfg.removeButtonLabel,
+                  child: InkWell(
+                    onTap: () => _removeRow(rowId),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: theme.errorColor,
+                        semanticLabel: cfg.removeButtonLabel,
+                      ),
                     ),
                   ),
                 ),
