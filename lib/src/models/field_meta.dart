@@ -61,6 +61,7 @@ enum FieldType {
   radio,
   chip,
   section,
+  group,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -217,6 +218,35 @@ class SearchableDropdownConfig extends FieldConfig {
   });
 }
 
+/// Config for FieldType.group (repeatable row groups).
+///
+/// A group renders its [FieldMeta.groupFields] once per row, lets the user
+/// add/remove rows, and produces a `List<Map<String, dynamic>>` value.
+class GroupConfig extends FieldConfig {
+  /// Label of the button that appends a new row.
+  final String addButtonLabel;
+
+  /// Tooltip for the per-row remove button.
+  final String removeButtonLabel;
+
+  /// Minimum number of rows. Cannot fall below this. Defaults to 1.
+  final int minRows;
+
+  /// Maximum number of rows. `null` means unlimited.
+  final int? maxRows;
+
+  /// Whether each row shows a remove button. Defaults to true.
+  final bool showRemoveButton;
+
+  const GroupConfig({
+    this.addButtonLabel = 'Add',
+    this.removeButtonLabel = 'Remove',
+    this.minRows = 1,
+    this.maxRows,
+    this.showRemoveButton = true,
+  }) : assert(minRows >= 0, 'GroupConfig: minRows must be >= 0');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Controls how a field's label is rendered above the input.
@@ -346,6 +376,9 @@ class FieldMeta {
   final int spinnerStep;
   final List<DropdownItem> options;
 
+  /// Per-row field schema for [FieldType.group]. Null for all other types.
+  final List<FieldMeta>? groupFields;
+
   const FieldMeta({
     required this.key,
     required this.label,
@@ -380,6 +413,7 @@ class FieldMeta {
     this.spinnerMax = 999,
     this.spinnerStep = 1,
     this.options = const [],
+    this.groupFields,
   })  : assert(
           sliderMin < sliderMax,
           'sliderMin ($sliderMin) must be less than sliderMax ($sliderMax)',
@@ -852,6 +886,60 @@ class FieldMeta {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Repeatable groups — a block of fields rendered once per row
+  // ─────────────────────────────────────────────────────────────────────────
+  factory FieldMeta.group({
+    required String key,
+    required String label,
+    required List<FieldMeta> fields,
+    bool required = false,
+    String? hint,
+    List<FieldValidator> validators = const [],
+    FieldDependency? dependency,
+    bool showLabel = true,
+    RjLabel? labelConfig,
+    RjLayout? layout,
+    bool viewOnly = false,
+    GroupConfig? config,
+  }) {
+    assert(
+      !key.contains('.') && !key.contains('[') && !key.contains(']'),
+      'FieldMeta.group: key "$key" must not contain ".", "[" or "]" '
+      '(used to build composite row error keys).',
+    );
+    assert(
+      !fields.any((f) => f.type == FieldType.group),
+      'FieldMeta.group: nested groups are not supported in v1.',
+    );
+    assert(
+      !fields.any((f) => f.type == FieldType.section),
+      'FieldMeta.group: section headers are not supported inside group rows.',
+    );
+    for (final f in fields) {
+      assert(
+        !f.key.contains('.') && !f.key.contains('[') && !f.key.contains(']'),
+        'FieldMeta.group: sub-field key "${f.key}" must not contain ".", '
+        '"[" or "]" (used to build composite row error keys).',
+      );
+    }
+    return FieldMeta(
+      key: key,
+      label: label,
+      type: FieldType.group,
+      required: required,
+      hint: hint,
+      validators: validators,
+      dependency: dependency,
+      showLabel: showLabel,
+      labelConfig: labelConfig,
+      layout: layout,
+      viewOnly: viewOnly,
+      config: config,
+      groupFields: fields,
+    );
+  }
+
   // ── Typed config accessors ────────────────────────────────────────────────
   // These helpers allow widgets to read config cleanly, falling back to
   // the flat params when no typed config is provided.
@@ -901,6 +989,9 @@ class FieldMeta {
           ? config as SearchableDropdownConfig
           : const SearchableDropdownConfig();
 
+  GroupConfig get groupConfig =>
+      config is GroupConfig ? config as GroupConfig : const GroupConfig();
+
   FieldMeta copyWith({
     bool? viewOnly,
     bool? required,
@@ -948,6 +1039,7 @@ class FieldMeta {
       spinnerMax: spinnerMax,
       spinnerStep: spinnerStep,
       options: options,
+      groupFields: groupFields,
     );
   }
 }

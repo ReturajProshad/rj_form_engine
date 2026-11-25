@@ -7,15 +7,13 @@
 import 'package:flutter/material.dart';
 import '../models/field_meta.dart';
 import '../models/form_result.dart';
+import '../models/rj_error_key.dart';
 import '../state/form_controller.dart';
 import '../theme/form_theme.dart';
+import '../utils/rj_grid.dart';
 import '../utils/rj_responsive.dart';
-import 'fields/text_fields.dart';
-import 'fields/date_field.dart';
-import 'fields/dropdown_field.dart';
-import 'fields/searchable_dropdown_field.dart';
-import 'fields/image_field.dart';
-import 'fields/extra_fields.dart';
+import 'fields/field_widget.dart';
+import 'fields/group_field.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // _FormScope — InheritedWidget to propagate controller without rebuilding
@@ -113,18 +111,18 @@ class _FieldBuilderState extends State<_FieldBuilder> {
   }
 
   void _syncState() {
-    _lastValue = _controller?.values[widget.field.key];
-    _lastError = _controller?.errors[widget.field.key];
+    _lastValue = _controller?.rawValue(widget.field.key);
+    _lastError = _controller?.rawError(widget.field.key);
     _lastParentValue = widget.field.dependency != null
-        ? _controller?.values[widget.field.dependency!.dependsOn]
+        ? _controller?.rawValue(widget.field.dependency!.dependsOn)
         : null;
   }
 
   void _onControllerChanged() {
-    final currentValue = _controller?.values[widget.field.key];
-    final currentError = _controller?.errors[widget.field.key];
+    final currentValue = _controller?.rawValue(widget.field.key);
+    final currentError = _controller?.rawError(widget.field.key);
     final currentParentValue = widget.field.dependency != null
-        ? _controller?.values[widget.field.dependency!.dependsOn]
+        ? _controller?.rawValue(widget.field.dependency!.dependsOn)
         : null;
 
     final valueChanged = currentValue != _lastValue;
@@ -146,7 +144,7 @@ class _FieldBuilderState extends State<_FieldBuilder> {
     final field = widget.field;
 
     if (field.dependency != null &&
-        !field.dependency!.isVisible(_controller?.values ?? {})) {
+        !field.dependency!.isVisible(_controller?.rawState ?? {})) {
       return const SizedBox.shrink();
     }
 
@@ -212,185 +210,39 @@ class _FieldBuilderState extends State<_FieldBuilder> {
     final width = widget.width;
     final theme = scope.theme;
 
-    switch (field.type) {
-      case FieldType.text:
-        return RjTextField(
-          field: field,
-          value: value,
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.textArea:
-        return RjTextField(
-          field: field,
-          value: value,
-          errorText: error,
-          theme: theme,
-          maxLines: 4,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.number:
-        return RjNumberField(
-          field: field,
-          value: value,
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.date:
-        return RjDateField(
-          field: field,
-          value: value is DateTime ? value : null,
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.dropdown:
-        return RjDropdownField(
-          field: field,
-          value: value?.toString(),
-          parentValue: _lastParentValue,
-          errorText: error,
-          theme: theme,
-          onChanged: (v, {label}) {
-            final extra = <String, dynamic>{};
-            if (label != null) extra['${field.key}Label'] = label;
-            widget.setValueCascade(
-              field.key,
-              v,
-              scope.fields,
-              extraValues: extra,
-            );
-          },
-          width: width,
-        );
-
-      case FieldType.searchableDropdown:
-        return RjSearchableDropdownField(
-          field: field,
-          value: value?.toString(),
-          parentValue: _lastParentValue,
-          errorText: error,
-          theme: theme,
-          onChanged: (v, {label}) {
-            final extra = <String, dynamic>{};
-            if (label != null) extra['${field.key}Label'] = label;
-            widget.setValueCascade(
-              field.key,
-              v,
-              scope.fields,
-              extraValues: extra,
-            );
-          },
-          width: width,
-        );
-
-      case FieldType.image:
-        final paths =
-            value is List ? value.whereType<String>().toList() : <String>[];
-        return RjImageField(
-          field: field,
-          value: paths,
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          onValidationError: (msg) => widget.setError(field.key, msg),
-          width: width,
-        );
-
-      case FieldType.custom:
-        if (field.builder == null) {
-          return Text(
-            'FieldMeta.custom requires a builder for key: ${field.key}',
-            style: TextStyle(color: theme.errorColor),
-          );
-        }
-        return field.builder!(
-          context,
-          field,
-          value,
-          (v) => widget.setValue(field.key, v),
-          error,
-        );
-
-      case FieldType.slider:
-        return RjSliderField(
-          field: field,
-          value: value is double
-              ? value
-              : (value is num ? value.toDouble() : null),
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.timePicker:
-        return RjTimePickerField(
-          field: field,
-          value: value is TimeOfDay ? value : null,
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.spinner:
-        return RjSpinnerField(
-          field: field,
-          value: value is int ? value : (value is num ? value.toInt() : null),
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.toggle:
-        return RjToggleField(
-          field: field,
-          value: value is bool ? value : null,
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.radio:
-        return RjRadioField(
-          field: field,
-          options: field.options,
-          value: value?.toString(),
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.chip:
-        final selected =
-            value is List ? value.whereType<String>().toList() : <String>[];
-        return RjChipField(
-          field: field,
-          options: field.options,
-          value: selected,
-          errorText: error,
-          theme: theme,
-          onChanged: (v) => widget.setValue(field.key, v),
-          width: width,
-        );
-
-      case FieldType.section:
-        return const SizedBox.shrink();
+    if (field.type == FieldType.group) {
+      return RjGroupField(
+        field: field,
+        width: width,
+        controller: scope.controller,
+        formFields: scope.fields,
+        theme: theme,
+        viewOnly: scope.viewOnly,
+        onChanged: scope.onChanged,
+      );
     }
+
+    return buildFieldWidget(
+      context: context,
+      field: field,
+      value: value,
+      error: error,
+      theme: theme,
+      width: width,
+      parentValue: _lastParentValue,
+      onChange: (v) => widget.setValue(field.key, v),
+      onCascadeChange: (v, {label}) {
+        final extra = <String, dynamic>{};
+        if (label != null) extra['${field.key}Label'] = label;
+        widget.setValueCascade(
+          field.key,
+          v,
+          scope.fields,
+          extraValues: extra,
+        );
+      },
+      onImageValidationError: (msg) => widget.setError(field.key, msg),
+    );
   }
 }
 
@@ -402,10 +254,12 @@ class _ErrorSummaryListener extends StatefulWidget {
   final RjFormTheme theme;
   final String? Function(Map<String, String> errors)? errorsSummaryBuilder;
   final double width;
+  final List<FieldMeta> fields;
 
   const _ErrorSummaryListener({
     required this.theme,
     required this.width,
+    required this.fields,
     this.errorsSummaryBuilder,
   });
 
@@ -416,6 +270,7 @@ class _ErrorSummaryListener extends StatefulWidget {
 class _ErrorSummaryListenerState extends State<_ErrorSummaryListener> {
   FormController? _controller;
   Map<String, String> _lastErrors = {};
+  int _lastGroupVersion = 0;
 
   @override
   void didChangeDependencies() {
@@ -426,6 +281,7 @@ class _ErrorSummaryListenerState extends State<_ErrorSummaryListener> {
       _controller = newController;
       _controller!.addListener(_onChanged);
       _lastErrors = Map.from(_controller!.errors);
+      _lastGroupVersion = _controller!.groupVersion;
     }
   }
 
@@ -437,10 +293,13 @@ class _ErrorSummaryListenerState extends State<_ErrorSummaryListener> {
 
   void _onChanged() {
     final errors = _controller?.errors ?? {};
+    final groupVersion = _controller?.groupVersion ?? 0;
     if (errors.length != _lastErrors.length ||
-        errors.entries.any((e) => _lastErrors[e.key] != e.value)) {
+        errors.entries.any((e) => _lastErrors[e.key] != e.value) ||
+        groupVersion != _lastGroupVersion) {
       setState(() {
         _lastErrors = Map.from(errors);
+        _lastGroupVersion = groupVersion;
       });
     }
   }
@@ -487,21 +346,39 @@ class _ErrorSummaryListenerState extends State<_ErrorSummaryListener> {
               ),
             )
           else
-            ..._lastErrors.entries.map(
-              (e) => Padding(
+            ..._lastErrors.entries.map((e) {
+              final parsed = RjErrorKey.tryParse(e.key);
+              final label = _groupErrorLabel(parsed);
+              return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
-                  '• ${e.value}',
+                  '• $label${e.value}',
                   style: TextStyle(
                     color: theme.errorColor,
                     fontSize: RjResponsive.errorFontSize(widget.width),
                   ),
                 ),
-              ),
-            ),
+              );
+            }),
         ],
       ),
     );
+  }
+
+  /// Resolves a "Row N — " prefix for composite group error keys.
+  /// Custom [errorsSummaryBuilder]s receive the raw map with composite keys
+  /// and can use [RjErrorKey.tryParse] themselves.
+  String _groupErrorLabel(RjErrorKey? key) {
+    if (key == null) return '';
+    String groupLabel = key.groupKey;
+    for (final f in widget.fields) {
+      if (f.key == key.groupKey) {
+        groupLabel = f.label;
+        break;
+      }
+    }
+    final idx = _controller?.groupIndexForId(key.groupKey, key.rowId) ?? -1;
+    return idx >= 0 ? '$groupLabel — Row ${idx + 1}: ' : '$groupLabel: ';
   }
 }
 
@@ -634,7 +511,7 @@ class _RjFormState extends State<RjForm> {
   void _setValue(String key, dynamic value) {
     _controller.setValueWithDerivation(key, value, widget.fields);
     _controller.clearError(key);
-    _clearDerivedFieldErrors(key);
+    _controller.clearDerivedFieldErrors(key, widget.fields);
     widget.onChanged?.call(key, value);
   }
 
@@ -651,18 +528,8 @@ class _RjFormState extends State<RjForm> {
       extraValues: extraValues,
     );
     _controller.clearError(key);
-    _clearDerivedFieldErrors(key);
+    _controller.clearDerivedFieldErrors(key, widget.fields);
     widget.onChanged?.call(key, value);
-  }
-
-  /// When a source field changes, clear errors on its derived fields too.
-  void _clearDerivedFieldErrors(String changedKey) {
-    for (final field in widget.fields) {
-      if (field.derivation != null &&
-          field.derivation!.derivesFrom.contains(changedKey)) {
-        _controller.clearError(field.key);
-      }
-    }
   }
 
   Future<void> _submit() async {
@@ -703,6 +570,7 @@ class _RjFormState extends State<RjForm> {
                 _ErrorSummaryListener(
                   theme: widget.theme,
                   width: width,
+                  fields: widget.fields,
                   errorsSummaryBuilder: widget.errorsSummaryBuilder,
                 ),
               ..._buildFieldList(width),
@@ -735,113 +603,18 @@ class _RjFormState extends State<RjForm> {
   }
 
   List<Widget> _buildFieldList(double width) {
-    final widgets = <Widget>[];
-    final currentRow = <(FieldMeta field, int span)>[];
-    int currentRowCols = 0;
-    const maxCols = 12;
-
-    void flushRow() {
-      if (currentRow.isEmpty) return;
-
-      if (currentRow.length == 1 && currentRow.first.$2 == maxCols) {
-        // Single full-width field — no need for Row
-        final (field, _) = currentRow.first;
-        widgets.add(
-          _FieldBuilder(
-            key: ValueKey(field.key),
-            field: field,
-            width: width,
-            flex: 1,
-            setValue: _setValue,
-            setValueCascade: _setValueCascade,
-            setError: _controller.setError,
-          ),
-        );
-      } else {
-        // Multi-field row
-        final rowChildren = <Widget>[];
-        for (int i = 0; i < currentRow.length; i++) {
-          final (field, span) = currentRow[i];
-          rowChildren.add(
-            Expanded(
-              flex: span,
-              child: _FieldBuilder(
-                key: ValueKey(field.key),
-                field: field,
-                width: width,
-                flex: span / maxCols,
-                setValue: _setValue,
-                setValueCascade: _setValueCascade,
-                setError: _controller.setError,
-              ),
-            ),
-          );
-
-          // Add horizontal gap between fields (but not after last field)
-          if (i < currentRow.length - 1) {
-            rowChildren.add(SizedBox(width: RjResponsive.fieldSpacing(width)));
-          }
-        }
-
-        widgets.add(
-          IntrinsicHeight(
-            child: Row(children: rowChildren),
-          ),
-        );
-      }
-
-      currentRow.clear();
-      currentRowCols = 0;
-    }
-
-    for (final field in widget.fields) {
-      if (field.type == FieldType.section) {
-        flushRow();
-        widgets.add(_buildSection(field, width));
-        continue;
-      }
-
-      final span = RjResponsive.resolveSpan(field.layout, width);
-
-      // Check if adding this field would overflow the row
-      if (currentRowCols + span > maxCols && currentRow.isNotEmpty) {
-        flushRow();
-      }
-
-      currentRow.add((field, span));
-      currentRowCols += span;
-    }
-
-    flushRow();
-    return widgets;
-  }
-
-  Widget _buildSection(FieldMeta field, double width) {
-    return Padding(
-      padding: EdgeInsets.only(
-        top: RjResponsive.fieldSpacing(width) * 1.5,
-        bottom: RjResponsive.fieldSpacing(width) * 0.5,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-              child: Divider(color: widget.theme.borderColor, thickness: 1)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              field.label,
-              style: widget.theme.labelStyle ??
-                  TextStyle(
-                    fontSize: RjResponsive.labelFontSize(width) + 2,
-                    fontWeight: FontWeight.w700,
-                    color: widget.theme.primaryColor,
-                    letterSpacing: 0.5,
-                  ),
-            ),
-          ),
-          Expanded(
-              child: Divider(color: widget.theme.borderColor, thickness: 1)),
-        ],
+    return buildResponsiveGrid(
+      width: width,
+      theme: widget.theme,
+      fields: widget.fields,
+      fieldBuilder: (field, flex) => _FieldBuilder(
+        key: ValueKey(field.key),
+        field: field,
+        width: width,
+        flex: flex,
+        setValue: _setValue,
+        setValueCascade: _setValueCascade,
+        setError: _controller.setError,
       ),
     );
   }

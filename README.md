@@ -45,7 +45,8 @@ RjForm(
 - **Auto-derivation** — fields that auto-compute their value from other fields (e.g., `total = price × quantity`)
 - **Label shadowing** — dropdown labels are stored alongside IDs, giving `compute` functions instant access to human-readable text
 - **Chained derivations** — A → B → C cascades update in a single pass
-- **14 field types** — text, number, date, dropdown, **searchable dropdown**, textarea, image upload, slider, time picker, spinner, toggle, radio, chip multi-select, custom
+- **Repeatable groups** — add/remove rows of sub-fields dynamically (e.g., invoice line items) with per-row derivations and grand-total rollups
+- **15 field types** — text, number, date, dropdown, **searchable dropdown**, textarea, image upload, slider, time picker, spinner, toggle, radio, chip multi-select, custom, **group**
 - **Custom fields** — inject any widget via `FieldMeta.custom`
 - **Cascading dropdowns** — parent/child dependency with auto-reload and auto-clear
 - **Async dropdown loading** — load items from APIs, databases, or caches
@@ -483,6 +484,98 @@ controller.recomputeAllDerivations(fields);
 
 This is called automatically when using `RjForm(initialValues: ...)`.
 
+### Repeatable Groups
+
+Fields can be grouped into **repeatable rows** — the user adds and removes rows of sub-fields at runtime. This is ideal for invoice line items, family members, milestones, or any one-to-many structure. Group values are stored as `List<Map<String, dynamic>>` under the group's `key`.
+
+```dart
+RjForm(
+  fields: [
+    FieldMeta.group(
+      key: 'items',
+      label: 'Line Items',
+      fields: [
+        FieldMeta.text(key: 'name', label: 'Item', required: true),
+        FieldMeta.number(key: 'qty', label: 'Qty'),
+        FieldMeta.number(key: 'rate', label: 'Rate'),
+      ],
+      config: const GroupConfig(
+        addButtonLabel: 'Add Line Item',
+        removeButtonLabel: 'Remove',
+        minRows: 1,      // minimum rows kept (default 1)
+        maxRows: 5,      // null = unlimited
+      ),
+    ),
+  ],
+  onSubmit: (result) async {
+    print(result.get('items')); // [{'name': 'Apples', 'qty': 3, 'rate': 2.0}, ...]
+  },
+)
+```
+
+**Per-row and rollup derivations** — the merged scope inside a group row is `{...rootState, ...rowState}` (row keys win), so row derivations can read both their own sub-fields *and* root fields. Root derivations can read the whole group list:
+
+```dart
+FieldMeta.group(
+  key: 'items',
+  label: 'Line Items',
+  fields: [
+    FieldMeta.number(key: 'qty', label: 'Qty', layout: const RjLayout(md: RjSpan.quarter)),
+    FieldMeta.number(key: 'rate', label: 'Rate', layout: const RjLayout(md: RjSpan.quarter)),
+    FieldMeta.number(
+      key: 'lineTotal',
+      label: 'Line Total',
+      derivation: FieldDerivation(
+        derivesFrom: ['qty', 'rate'],
+        compute: (state) {
+          final qty = (state['qty'] as num?)?.toDouble() ?? 0;
+          final rate = (state['rate'] as num?)?.toDouble() ?? 0;
+          return qty * rate;
+        },
+      ),
+      layout: const RjLayout(md: RjSpan.half),
+    ),
+  ],
+),
+FieldMeta.number(
+  key: 'grandTotal',
+  label: 'Grand Total (auto)',
+  derivation: FieldDerivation(
+    derivesFrom: ['items'],
+    compute: (state) {
+      var sum = 0.0;
+      for (final row in (state['items'] as List? ?? const [])) {
+        if (row is Map) {
+          sum += (row['lineTotal'] as num?)?.toDouble() ?? 0;
+        }
+      }
+      return sum;
+    },
+  ),
+),
+```
+
+**How it works:**
+
+- Every row is given an internal `__rowId`, which is **stripped from `values` and `FormResult`** — you always receive clean `List<Map<String, dynamic>>` output.
+- Row identity is stable regardless of list position. Row-field errors are keyed `'<groupKey>.<rowId>.<subKey>'` (e.g., `items.row_items_2.name`) and survive mid-list row removal. Use `RjErrorKey.tryParse(key)` to decode them.
+- The default error summary renders group errors as `• <GroupLabel> — Row N: <message>`. A custom `errorsSummaryBuilder` still receives the raw composite keys.
+- `onChanged` emits `(groupKey, List)` when a row is added/removed and `(compositeKey, value)` when a row sub-field changes.
+- Rows render with the shared responsive grid, so sub-fields can use `RjLayout`/`RjSpan` like any other field.
+- When loading existing data with `initialValues`, rows are seeded and missing `__rowId`s are injected automatically.
+- `required: true` on a group means **at least one row with a user-entered value** (derived sub-fields don't count). The error is stored under the group key itself (e.g. `errors['items']`) and shown below the rows. Group-level `validators` receive the clean `List<Map<String, dynamic>>`.
+- `controller.clear()` (and `autoClearOnSubmit`) re-seeds `minRows` blank rows. Those untouched seeded rows don't make `isDirty` true.
+
+**`GroupConfig` properties:**
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `addButtonLabel` | `String` | `'Add'` | Label of the add-row button |
+| `removeButtonLabel` | `String` | `'Remove'` | Tooltip for the remove-row button |
+| `minRows` | `int` | `1` | Minimum rows kept; the last `minRows` rows cannot be removed |
+| `maxRows` | `int?` | `null` | Maximum rows; `null` means unlimited |
+| `showRemoveButton` | `bool` | `true` | When `false`, hides remove buttons entirely |
+
 ### Label Customization
 
 By default, every field renders its `label` text above the input. You can control or replace this with `showLabel` and `labelConfig`:
@@ -776,6 +869,7 @@ FieldMeta.custom(
 | `FieldType.radio` | `RjRadioField` | `String` (option id) | Gender, single choice |
 | `FieldType.chip` | `RjChipField` | `List<String>` (option ids) | Tags, interests, skills |
 | `FieldType.custom` | Your widget | Any | Signature pad, star rating, maps |
+| `FieldType.group` | `RjGroupField` | `List<Map<String, dynamic>>` | Invoice line items, repeatable records |
 
 ---
 
@@ -971,6 +1065,10 @@ flutter run
 - **No built-in form state persistence.** Form data is lost if the app is killed in the background. Implement your own persistence layer if needed.
 - **No i18n built-in.** Labels, hints, and error messages are plain strings. You must handle localization yourself (e.g., via `AppLocalizations.of(context)`).
 - **`FormResult.get<T>()` returns `null` on type mismatch.** If you request `result.get<int>('age')` but the stored value is a `String`, you get `null` silently. Always use the correct type.
+- **Groups are single-level.** `FieldType.group` does not support nested groups or section headers inside rows (asserted in debug mode).
+- **No cross-row validation in v1.** Per-row required/validators run per row; validate a row against its siblings in `onSubmit` if needed.
+- **Rows render eagerly.** There is no virtualization; keep row counts reasonable.
+- **No row reordering.** Rows append at the end and remove in place.
 
 ---
 
@@ -984,7 +1082,9 @@ flutter run
 - [ ] Form state persistence (auto-save / restore)
 - [ ] File upload field (non-image)
 - [ ] Rich text / markdown field
-- [ ] Dynamic field addition/removal at runtime
+- [x] Dynamic field addition/removal at runtime (repeatable groups)
+- [ ] Nested groups / cross-row validation
+- [ ] Row reordering / virtualization in groups
 - [ ] Integration tests
 
 ---

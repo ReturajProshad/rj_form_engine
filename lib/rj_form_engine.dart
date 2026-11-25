@@ -16,6 +16,7 @@ export 'src/models/field_meta.dart'
         TextConfig,
         TimeConfig,
         SearchableDropdownConfig,
+        GroupConfig,
         FieldValidator,
         CustomFieldBuilder,
         RjLabel,
@@ -26,6 +27,7 @@ export 'src/models/field_meta.dart'
 export 'src/models/dropdown_item.dart';
 export 'src/models/dropdown_source.dart';
 export 'src/models/form_result.dart';
+export 'src/models/rj_error_key.dart';
 
 // State
 export 'src/state/form_controller.dart';
